@@ -36,6 +36,9 @@ import java.awt.image.DataBufferInt;
 import java.awt.image.WritableRaster;
 import java.io.Serializable;
 import java.lang.reflect.InvocationTargetException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -56,30 +59,54 @@ import com.amd.aparapi.Range;
  * <p>
  * If you don't know what ONB stands for, then it is OrthoNormal Basis.
  * <p>
+ * The values in the {@code float} array {@code intersections} consists of Shape Offset and Distance (T), for each shape currently being intersected by a ray.
+ * <p>
  * The values in the {@code float} array {@code rays} consists of Origin X, Origin Y, Origin Z, Direction X, Direction Y and Direction Z, for each ray fired from each pixel.
  * <p>
- * The values in the {@code float} array {@code spheres} consists of X, Y, Z and Radius, for each sphere defined.
- * <p>
- * The values in the {@code float} array {@code spheresIntersected} consists of X, Y, Z, Radius and Distance (T), for each sphere currently being intersected by a ray.
+ * The values in the {@code float} array {@code shapes} consists of Type, Size and {@code float}[Size], for each shape defined.
  * 
  * @since 1.0.0
  * @author J&#246;rgen Lundgren
  */
 public final class RayCaster extends Kernel implements KeyListener {
+	private static final float EPSILON = 1.e-4F;
+	private static final float MAXIMUM_DISTANCE = Float.MAX_VALUE;
+	private static final float TYPE_SPHERE = 1.0F;
+	private static final int ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT = 0;
+	private static final int ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR = 6;
+	private static final int ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR = 9;
+	private static final int ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR = 12;
+	private static final int ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR = 15;
+	private static final int ABSOLUTE_OFFSET_OF_CAMERA_UP_VECTOR = 3;
+	private static final int ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR = 18;
 	private static final int HEIGHT = 768;
+	private static final int RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS = 1;
+	private static final int RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS = 0;
+	private static final int RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS = 3;
+	private static final int RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS = 0;
+	private static final int RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES = 0;
+	private static final int RELATIVE_OFFSET_OF_SHAPE_SIZE_SCALAR_IN_SHAPES = 1;
+	private static final int RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES = 6;
+	private static final int RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES = 2;
+	private static final int RELATIVE_OFFSET_OF_SPHERE_RADIUS_SCALAR_IN_SHAPES = 5;
+	private static final int SIZE_OF_CAMERA = 3 + 3 + 3 + 3 + 3 + 3 + 1;
+	private static final int SIZE_OF_INTERSECTION_IN_INTERSECTIONS = 1 + 1;
+	private static final int SIZE_OF_RAY_IN_RAYS = 3 + 3;
+	private static final int SIZE_OF_SPHERE_IN_SHAPES = 1 + 1 + 3 + 1 + 3;
 	private static final int WIDTH = 1024;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	private final boolean[] isKeyPressed;
 	private final BufferedImage bufferedImage;
-	private final float[] camera;
+	private final Camera camera;
+	private final float[] cameraArray;
+	private final float[] intersections;
 	private final float[] rays;
-	private final float[] spheres;
-	private final float[] spheresIntersected;
+	private final float[] shapes;
 	private final FPSCounter fPSCounter;
 	private final int height;
-	private final int spheresLength;
+	private final int shapesLength;
 	private final int width;
 	private final int[] rGB;
 	private final JFrame jFrame;
@@ -89,70 +116,104 @@ public final class RayCaster extends Kernel implements KeyListener {
 	
 	private RayCaster() {
 		this.bufferedImage = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
-		this.camera = doCreateCamera();
+		this.camera = new Camera();
+		this.cameraArray = this.camera.getArray();
 		this.fPSCounter = new FPSCounter();
-		this.height = HEIGHT;
+		this.height = this.bufferedImage.getHeight();
+		this.intersections = doCreateIntersections(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
 		this.isKeyPressed = new boolean[256];
 		this.jFrame = doCreateJFrame(this.bufferedImage, this.camera, this.fPSCounter);
 		this.range = Range.create(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
-		this.rays = doCreateRays(WIDTH * HEIGHT);
+		this.rays = doCreateRays(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
 		this.rGB = toRGB(this.bufferedImage);
-		this.spheres = doCreateSpheres();
-		this.spheresIntersected = doCreateSpheresIntersected(WIDTH * HEIGHT);
-		this.spheresLength = this.spheres.length;
-		this.width = WIDTH;
+		this.shapes = doCreateScene().toFloatArray();
+		this.shapesLength = this.shapes.length;
+		this.width = this.bufferedImage.getWidth();
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+	/**
+	 * Overridden to handle key typing.
+	 * 
+	 * @param e a {@code KeyEvent}
+	 */
 	@Override
 	public void keyTyped(final KeyEvent e) {
 		
 	}
 	
+	/**
+	 * Overridden to handle key pressing.
+	 * 
+	 * @param e a {@code KeyEvent}
+	 */
 	@Override
 	public void keyPressed(final KeyEvent e) {
 		this.isKeyPressed[e.getKeyCode()] = true;
 	}
 	
+	/**
+	 * Overridden to handle key releasing.
+	 * 
+	 * @param e a {@code KeyEvent}
+	 */
 	@Override
 	public void keyReleased(final KeyEvent e) {
 		this.isKeyPressed[e.getKeyCode()] = false;
 	}
 	
+	/**
+	 * This is what the {@code Kernel} executes on the GPU (or in the CPU).
+	 */
 	@Override
 	public void run() {
 //		Initialize index, coordinate and offset values:
 		final int index = getGlobalId();
-		final int raysOffset = index * 6;
+		final int intersectionOffset = index * SIZE_OF_INTERSECTION_IN_INTERSECTIONS;
+		final int raysOffset = index * SIZE_OF_RAY_IN_RAYS;
 		
 //		Initialize the U- and V-coordinates:
-		final float x = index % this.width - this.width / 2.0F + 0.5F;
-		final float y = index / this.width - this.height / 2.0F + 0.5F;
+		final float u = index % this.width - this.width / 2.0F + 0.5F;
+		final float v = index / this.width - this.height / 2.0F + 0.5F;
 		
 //		Update the origin point and direction vector of the ray to fire:
-		this.rays[raysOffset + 0] = this.camera[ 0];
-		this.rays[raysOffset + 1] = this.camera[ 1];
-		this.rays[raysOffset + 2] = this.camera[ 2];
-		this.rays[raysOffset + 3] = this.camera[ 9] * x + this.camera[12] * y - this.camera[15] * this.camera[18];
-		this.rays[raysOffset + 4] = this.camera[10] * x + this.camera[13] * y - this.camera[16] * this.camera[18];
-		this.rays[raysOffset + 5] = this.camera[11] * x + this.camera[14] * y - this.camera[17] * this.camera[18];
+		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 0] = this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 0];
+		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 1] = this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 1];
+		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 2] = this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 2];
+		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 0] = this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 0] * u + this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 0] * v - this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 0] * this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
+		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 1] = this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 1] * u + this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 1] * v - this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 1] * this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
+		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 2] = this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 2] * u + this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 2] * v - this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 2] * this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
 		
-//		Normalize the ray direction:
-		doNormalize(this.rays, raysOffset + 3);
+//		Normalize the ray direction vector:
+		doNormalize(this.rays, raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS);
 		
 //		Calculate the distance to the closest sphere:
 		final float distance = doGetIntersection();
 		
-//		Update the RGB-values of the current pixel:
-		final int r = distance > 0.0F && distance < Float.MAX_VALUE ? 255 : 0;
-		final int g = distance > 0.0F && distance < Float.MAX_VALUE ? 255 : 0;
-		final int b = distance > 0.0F && distance < Float.MAX_VALUE ? 255 : 0;
+		int shapeOffset = -1;
+		
+		int r = 0;
+		int g = 0;
+		int b = 0;
+		
+		if(distance > 0.0F && distance < MAXIMUM_DISTANCE) {
+//			Fetch the offset of the intersected shape from the intersections array:
+			shapeOffset = (int)(this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS]);
+			
+//			Update the RGB-values of the current pixel, given the RGB-values of the intersected shape:
+			r = (int)(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 0]);
+			g = (int)(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 1]);
+			b = (int)(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 2]);
+		}
 		
 //		Set the RGB-value of the current pixel:
 		this.rGB[index] = doToRGB(r, g, b);
 	}
 	
+	/**
+	 * Called to start the Ray Caster.
+	 */
 	public void start() {
 //		Add a KeyListener to the JFrame:
 		doInvokeAndWait(() -> this.jFrame.addKeyListener(this));
@@ -161,19 +222,17 @@ public final class RayCaster extends Kernel implements KeyListener {
 		setExplicit(true);
 		
 //		Tell the API to fetch the below arrays and their values before executing this Kernel instance (they will be transferred to the GPU):
+		put(this.intersections);
 		put(this.rays);
-		put(this.spheres);
-		put(this.spheresIntersected);
+		put(this.shapes);
 		put(this.rGB);
 		
-//		Calculate the current OrthoNormal Basis vectors for the camera:
-		doCalculateOrthonormalBasis();
-		
 		while(true) {
+//			Update the current frame:
 			doUpdate();
 			
 //			Tell the API to fetch the camera array and its values before executing this Kernel instance (it will be transferred to the GPU every cycle):
-			put(this.camera);
+			put(this.cameraArray);
 			
 //			Execute this Kernel instance:
 			execute(this.range);
@@ -191,6 +250,11 @@ public final class RayCaster extends Kernel implements KeyListener {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+	/**
+	 * The entry-point of this Ray Caster.
+	 * 
+	 * @param args these are not used
+	 */
 	public static void main(final String[] args) {
 		final
 		RayCaster rayCaster = doRunInEDT(() -> new RayCaster());
@@ -202,115 +266,104 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private float doGetIntersection() {
 //		Initialize the index and offset values:
 		final int index = getGlobalId();
-		final int raysOffset = index * 6;
-		final int spheresIntersectedOffset = index * 5;
+		final int intersectionOffset = index * SIZE_OF_INTERSECTION_IN_INTERSECTIONS;
+		final int raysOffset = index * SIZE_OF_RAY_IN_RAYS;
 		
-//		Initialize offset to closest sphere:
-		int sphereClosestOffset = -1;
+//		Initialize offset to closest shape:
+		int shapeClosestOffset = -1;
 		
-//		Initialize distance to closest sphere:
-		float sphereClosestDistance = Float.MAX_VALUE;
+//		Initialize distance to closest shape:
+		float shapeClosestDistance = MAXIMUM_DISTANCE;
 		
 //		Initialize the ray values:
-		final float rayOriginX = this.rays[raysOffset + 0];
-		final float rayOriginY = this.rays[raysOffset + 1];
-		final float rayOriginZ = this.rays[raysOffset + 2];
-		final float rayDirectionX = this.rays[raysOffset + 3];
-		final float rayDirectionY = this.rays[raysOffset + 4];
-		final float rayDirectionZ = this.rays[raysOffset + 5];
+		final float rayOriginX = this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 0];
+		final float rayOriginY = this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 1];
+		final float rayOriginZ = this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 2];
+		final float rayDirectionX = this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 0];
+		final float rayDirectionY = this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 1];
+		final float rayDirectionZ = this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 2];
 		
-//		Initialize the temporary sphere intersection values:
+//		Initialize the temporary shape intersection values:
+		float shapeType = 0.0F;
+		float shapeSize = 0.0F;
+		float shapeDistance = MAXIMUM_DISTANCE;
 		float sphereX = 0.0F;
 		float sphereY = 0.0F;
 		float sphereZ = 0.0F;
 		float sphereRadius = 0.0F;
-		float sphereDistance = Float.MAX_VALUE;
 		
 //		Initialize the temporary delta values:
 		float dx = 0.0F;
 		float dy = 0.0F;
 		float dz = 0.0F;
 		
-//		Initialize the epsilon value:
-		final float epsilon = 1.e-4F;
-		
 //		Initialize other temporarily used values:
 		float b = 0.0F;
 		float discriminant = 0.0F;
 		
 //		Reset the float array spheresIntersected, so we can perform a new intersection test:
-		this.spheresIntersected[spheresIntersectedOffset + 0] = 0.0F;
-		this.spheresIntersected[spheresIntersectedOffset + 1] = 0.0F;
-		this.spheresIntersected[spheresIntersectedOffset + 2] = 0.0F;
-		this.spheresIntersected[spheresIntersectedOffset + 3] = 0.0F;
-		this.spheresIntersected[spheresIntersectedOffset + 4] = Float.MAX_VALUE;
+		this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS] = -1.0F;
+		this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS] = MAXIMUM_DISTANCE;
 		
-//		TODO: Find out why 'this.spheres.length' cannot be compiled by Aparapi.
-		for(int i = 0; i < this.spheresLength; i += 4) {
-//			Update the temporary X-, Y-, Z- and radius values of the current sphere to our temporary variables:
-			sphereX = this.spheres[i + 0];
-			sphereY = this.spheres[i + 1];
-			sphereZ = this.spheres[i + 2];
-			sphereRadius = this.spheres[i + 3];
+		for(int i = 0; i < this.shapesLength; i += shapeSize) {
+//			Update the temporary type and size values of the current shape to our temporary variables:
+			shapeType = this.shapes[i + RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES];
+			shapeSize = this.shapes[i + RELATIVE_OFFSET_OF_SHAPE_SIZE_SCALAR_IN_SHAPES];
 			
-//			Calculate the delta values between the current sphere and the origin of the camera:
-			dx = sphereX - rayOriginX;
-			dy = sphereY - rayOriginY;
-			dz = sphereZ - rayOriginZ;
-			
-			b = dx * rayDirectionX + dy * rayDirectionY + dz * rayDirectionZ;
-			
-			discriminant = b * b - (dx * dx + dy * dy + dz * dz) + sphereRadius * sphereRadius;
-			
-			if(discriminant >= 0.0F) {
-				discriminant = sqrt(discriminant);
+			if(shapeType == TYPE_SPHERE) {
+//				Update the temporary X-, Y-, Z- and radius values of the current sphere to our temporary variables:
+				sphereX = this.shapes[i + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 0];
+				sphereY = this.shapes[i + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 1];
+				sphereZ = this.shapes[i + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 2];
+				sphereRadius = this.shapes[i + RELATIVE_OFFSET_OF_SPHERE_RADIUS_SCALAR_IN_SHAPES];
 				
-				sphereDistance = b - discriminant;
+//				Calculate the delta values between the current sphere and the origin of the camera:
+				dx = sphereX - rayOriginX;
+				dy = sphereY - rayOriginY;
+				dz = sphereZ - rayOriginZ;
 				
-				if(sphereDistance <= epsilon) {
-					sphereDistance = b + discriminant;
+//				Calculate the dot product:
+				b = dx * rayDirectionX + dy * rayDirectionY + dz * rayDirectionZ;
+				
+//				Calculate the discriminant:
+				discriminant = b * b - (dx * dx + dy * dy + dz * dz) + sphereRadius * sphereRadius;
+				
+				if(discriminant >= 0.0F) {
+//					Recalculate the discriminant:
+					discriminant = sqrt(discriminant);
 					
-					if(sphereDistance <= epsilon) {
-						sphereDistance = 0.0F;
+//					Calculate the distance:
+					shapeDistance = b - discriminant;
+					
+					if(shapeDistance <= EPSILON) {
+//						Recalculate the distance:
+						shapeDistance = b + discriminant;
+						
+						if(shapeDistance <= EPSILON) {
+//							We're too close to the shape, so we practically do not see it:
+							shapeDistance = 0.0F;
+						}
 					}
 				}
 			}
 			
-			if(sphereDistance > 0.0F && sphereDistance < sphereClosestDistance) {
-				sphereClosestDistance = sphereDistance;
-				sphereClosestOffset = i;
+			if(shapeDistance > 0.0F && shapeDistance < shapeClosestDistance) {
+//				Update the distance to and the offset of the closest shape:
+				shapeClosestDistance = shapeDistance;
+				shapeClosestOffset = i;
 			}
 		}
 		
-		if(sphereClosestOffset > -1) {
-			this.spheresIntersected[spheresIntersectedOffset + 0] = this.spheres[sphereClosestOffset + 0];
-			this.spheresIntersected[spheresIntersectedOffset + 1] = this.spheres[sphereClosestOffset + 1];
-			this.spheresIntersected[spheresIntersectedOffset + 2] = this.spheres[sphereClosestOffset + 2];
-			this.spheresIntersected[spheresIntersectedOffset + 3] = this.spheres[sphereClosestOffset + 3];
-			this.spheresIntersected[spheresIntersectedOffset + 4] = sphereClosestDistance;
+		if(shapeClosestOffset > -1) {
+			this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS] = shapeClosestOffset;
+			this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS] = shapeClosestDistance;
 		}
 		
-		return sphereClosestDistance;
+		return shapeClosestDistance;
 	}
 	
 	private float doLength(final float[] vector, final int offset) {
 		return sqrt(doLengthSquared(vector, offset));
-	}
-	
-	private void doCalculateOrthonormalBasis() {
-		doSubtract(this.camera, 0, this.camera, 6, this.camera, 15);
-		doNormalize(this.camera, 15);
-		doCrossProduct(this.camera, 3, this.camera, 15, this.camera, 9);
-		doNormalize(this.camera, 9);
-		doCrossProduct(this.camera, 15, this.camera, 9, this.camera, 12);
-	}
-	
-	private void doMoveCamera(final float x, final float y, final float z) {
-		this.camera[0] += x;
-		this.camera[1] += y;
-		this.camera[2] += z;
-		
-		doCalculateOrthonormalBasis();
 	}
 	
 	private void doNormalize(final float[] vector, final int offset) {
@@ -322,23 +375,24 @@ public final class RayCaster extends Kernel implements KeyListener {
 	}
 	
 	private void doUpdate() {
+//		Calculate the movement based on some velocity, calculated as the distance moved per second:
 		final float velocity = 250.0F;
 		final float movement = this.fPSCounter.getFrameTimeMillis() / 1000.0F * velocity;
 		
 		if(this.isKeyPressed[KeyEvent.VK_A]) {
-			doMoveCamera(-movement, 0.0F, 0.0F);
+			this.camera.move(-movement, 0.0F, 0.0F);
 		}
 		
 		if(this.isKeyPressed[KeyEvent.VK_D]) {
-			doMoveCamera(movement, 0.0F, 0.0F);
+			this.camera.move(movement, 0.0F, 0.0F);
 		}
 		
 		if(this.isKeyPressed[KeyEvent.VK_S]) {
-			doMoveCamera(0.0F, 0.0F, movement);
+			this.camera.move(0.0F, 0.0F, movement);
 		}
 		
 		if(this.isKeyPressed[KeyEvent.VK_W]) {
-			doMoveCamera(0.0F, 0.0F, -movement);
+			this.camera.move(0.0F, 0.0F, -movement);
 		}
 	}
 	
@@ -364,51 +418,19 @@ public final class RayCaster extends Kernel implements KeyListener {
 		return doDotProduct(vector, offset, vector, offset);
 	}
 	
-	private static float[] doCreateCamera() {
-//		TODO: Find out whether Look-at Z and View-plane distance are correlated in some way!?
-		final float[] camera = new float[] {
-			0.0F, 0.0F, 100.0F,//Eye(0).
-			0.0F, 1.0F, 0.0F,//Up(3).
-			0.0F, 0.0F, -800.0F,//Look-at(6).
-			0.0F, 0.0F, 0.0F,//Orthonormal-basis U(9).
-			0.0F, 0.0F, 0.0F,//Orthonormal-basis V(12).
-			0.0F, 0.0F, 0.0F,//Orthonormal-basis W(15).
-			800.0F//View-plane distance(18).
-		};
+	private static float[] doCreateIntersections(final int length) {
+		final float[] intersections = new float[length * SIZE_OF_INTERSECTION_IN_INTERSECTIONS];
 		
-		return camera;
+		for(int i = 0; i < intersections.length; i += SIZE_OF_INTERSECTION_IN_INTERSECTIONS) {
+			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS] = -1.0F;
+			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS] = MAXIMUM_DISTANCE;
+		}
+		
+		return intersections;
 	}
 	
 	private static float[] doCreateRays(final int length) {
-		return new float[length * 6];
-	}
-	
-	private static float[] doCreateSpheres() {
-		return new float[] {
-//			1.e5F + 1.0F, 40.8F, 81.6F, 1.e5F,
-//			-1.e5F + 99.0F, 40.8F, 81.6F, 1.e5F,
-//			50.0F, 40.8F, 1.e5F, 1.e5F,
-//			50.0F, 40.8F, -1.e5F + 170.0F, 1.e5F,
-//			50.0F, 1.e5F, 81.6F, 1.e5F,
-//			50.0F, -1.e5F + 81.6F, 81.6F, 1.e5F,
-			27.0F, 16.5F, 47.0F, 16.5F,
-			73.0F, 16.5F, 78.0F, 16.5F,
-//			50.0F, 681.6F - 0.27F, 81.6F, 600.0F
-		};
-	}
-	
-	private static float[] doCreateSpheresIntersected(final int length) {
-		final float[] spheresIntersected = new float[length * 5];
-		
-		for(int i = 0; i < spheresIntersected.length; i += 5) {
-			spheresIntersected[i + 0] = 0.0F;
-			spheresIntersected[i + 1] = 0.0F;
-			spheresIntersected[i + 2] = 0.0F;
-			spheresIntersected[i + 3] = 0.0F;
-			spheresIntersected[i + 4] = Float.MAX_VALUE;
-		}
-		
-		return spheresIntersected;
+		return new float[length * SIZE_OF_RAY_IN_RAYS];
 	}
 	
 	@SuppressWarnings("unused")
@@ -430,7 +452,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		return ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | ((b & 0xFF) << 0);
 	}
 	
-	private static JFrame doCreateJFrame(final BufferedImage bufferedImage, final float[] camera, final FPSCounter fPSCounter) {
+	private static JFrame doCreateJFrame(final BufferedImage bufferedImage, final Camera camera, final FPSCounter fPSCounter) {
 		final
 		JFrame jFrame = new JFrame();
 		jFrame.setContentPane(doCreateJPanel(bufferedImage, camera, fPSCounter));
@@ -447,7 +469,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		return jFrame;
 	}
 	
-	private static JPanel doCreateJPanel(final BufferedImage bufferedImage, final float[] camera, final FPSCounter fPSCounter) {
+	private static JPanel doCreateJPanel(final BufferedImage bufferedImage, final Camera camera, final FPSCounter fPSCounter) {
 		final
 		JPanel jPanel = new JBufferedImagePanel(bufferedImage, camera, fPSCounter);
 		jPanel.setBorder(BorderFactory.createLineBorder(Color.WHITE, 1));
@@ -455,6 +477,15 @@ public final class RayCaster extends Kernel implements KeyListener {
 		jPanel.setPreferredSize(new Dimension(bufferedImage.getWidth(), bufferedImage.getHeight()));
 		
 		return jPanel;
+	}
+	
+	private static Scene doCreateScene() {
+		final
+		Scene scene = new Scene();
+		scene.addShape(new Sphere(27.0F, 16.5F, 47.0F, 16.5F, 100.0F, 200.0F, 255.0F));
+		scene.addShape(new Sphere(73.0F, 16.5F, 78.0F, 16.5F, 255.0F, 200.0F, 100.0F));
+		
+		return scene;
 	}
 	
 	private static void doCrossProduct(final float[] vector0, final int offset0, final float[] vector1, final int offset1, final float[] vector2, final int offset2) {
@@ -667,6 +698,159 @@ public final class RayCaster extends Kernel implements KeyListener {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+//	TODO: Find out whether Look-at Z and View-plane distance are correlated in some way!?
+	public static final class Camera {
+		private final float[] array = new float[SIZE_OF_CAMERA];
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		public Camera() {
+			setEye(0.0F, 0.0F, 100.0F);
+			setUp(0.0F, 1.0F, 0.0F);
+			setLookAt(0.0F, 0.0F, -800.0F);
+			setViewPlaneDistance(800.0F);
+			calculateOrthonormalBasis();
+		}
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		public float getEyeX() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 0];
+		}
+		
+		public float getEyeY() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 1];
+		}
+		
+		public float getEyeZ() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 2];
+		}
+		
+		public float getLookAtX() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR + 0];
+		}
+		
+		public float getLookAtY() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR + 1];
+		}
+		
+		public float getLookAtZ() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR + 2];
+		}
+		
+		public float getUpX() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP_VECTOR + 0];
+		}
+		
+		public float getUpY() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP_VECTOR + 1];
+		}
+		
+		public float getUpZ() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP_VECTOR + 2];
+		}
+		
+		public float getOrthoNormalBasisUX() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 0];
+		}
+		
+		public float getOrthoNormalBasisUY() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 1];
+		}
+		
+		public float getOrthoNormalBasisUZ() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 2];
+		}
+		
+		public float getOrthoNormalBasisVX() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 0];
+		}
+		
+		public float getOrthoNormalBasisVY() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 1];
+		}
+		
+		public float getOrthoNormalBasisVZ() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 2];
+		}
+		
+		public float getOrthoNormalBasisWX() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 0];
+		}
+		
+		public float getOrthoNormalBasisWY() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 1];
+		}
+		
+		public float getOrthoNormalBasisWZ() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 2];
+		}
+		
+		public float getViewPlaneDistance() {
+			return this.array[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
+		}
+		
+		public float[] getArray() {
+			return this.array;
+		}
+		
+		@SuppressWarnings("synthetic-access")
+		public void calculateOrthonormalBasis() {
+			doSubtract(this.array, ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT, this.array, ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR);
+			doNormalize(this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR);
+			doCrossProduct(this.array, ABSOLUTE_OFFSET_OF_CAMERA_UP_VECTOR, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR);
+			doNormalize(this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR);
+			doCrossProduct(this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR);
+		}
+		
+		public void move(final float x, final float y, final float z) {
+			this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 0] += x;
+			this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 1] += y;
+			this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 2] += z;
+			
+			calculateOrthonormalBasis();
+		}
+		
+		public void setEye(final float x, final float y, final float z) {
+			this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 0] = x;
+			this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 1] = y;
+			this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 2] = z;
+		}
+		
+		public void setLookAt(final float x, final float y, final float z) {
+			this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR + 0] = x;
+			this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR + 1] = y;
+			this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR + 2] = z;
+		}
+		
+		public void setUp(final float x, final float y, final float z) {
+			this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP_VECTOR + 0] = x;
+			this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP_VECTOR + 1] = y;
+			this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP_VECTOR + 2] = z;
+		}
+		
+		public void setViewPlaneDistance(final float distance) {
+			this.array[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR] = distance;
+		}
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		@SuppressWarnings("synthetic-access")
+		private static float doLength(final float[] vector, final int offset) {
+			return (float)(Math.sqrt(doLengthSquared(vector, offset)));
+		}
+		
+		private static void doNormalize(final float[] vector, final int offset) {
+			final float lengthReciprocal = 1.0F / doLength(vector, offset);
+			
+			vector[offset + 0] *= lengthReciprocal;
+			vector[offset + 1] *= lengthReciprocal;
+			vector[offset + 2] *= lengthReciprocal;
+		}
+	}
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
 	public static final class FPSCounter {
 		private final AtomicLong newFPS = new AtomicLong();
 		private final AtomicLong newFPSReferenceTimeMillis = new AtomicLong();
@@ -717,12 +901,12 @@ public final class RayCaster extends Kernel implements KeyListener {
 		////////////////////////////////////////////////////////////////////////////////////////////////////
 		
 		private final BufferedImage bufferedImage;
-		private final float[] camera;
+		private final Camera camera;
 		private final FPSCounter fPSCounter;
 		
 		////////////////////////////////////////////////////////////////////////////////////////////////////
 		
-		public JBufferedImagePanel(final BufferedImage bufferedImage, final float[] camera, final FPSCounter fPSCounter) {
+		public JBufferedImagePanel(final BufferedImage bufferedImage, final Camera camera, final FPSCounter fPSCounter) {
 			this.bufferedImage = bufferedImage;
 			this.camera = camera;
 			this.fPSCounter = fPSCounter;
@@ -732,7 +916,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		
 		@Override
 		public void paintComponent(final Graphics graphics) {
-			final String string = String.format("FPS: %s    Location: %s, %s, %s", Long.toString(this.fPSCounter.getFPS()), Float.toString(this.camera[0]), Float.toString(this.camera[1]), Float.toString(this.camera[2]));
+			final String string = String.format("FPS: %s    Location: %s, %s, %s", Long.toString(this.fPSCounter.getFPS()), Float.toString(this.camera.getEyeX()), Float.toString(this.camera.getEyeY()), Float.toString(this.camera.getEyeZ()));
 			
 			final
 			Graphics2D graphics2D = Graphics2D.class.cast(graphics);
@@ -745,6 +929,104 @@ public final class RayCaster extends Kernel implements KeyListener {
 			graphics2D.setColor(Color.WHITE);
 			graphics2D.drawRect(10, 10, graphics2D.getFontMetrics().stringWidth(string) + 20, graphics2D.getFontMetrics().getHeight() + 20);
 			graphics2D.drawString(string, 20, 30);
+		}
+	}
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	private static final class Scene {
+		private final List<Shape> shapes = new ArrayList<>();
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		public Scene() {
+			
+		}
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		public float[] toFloatArray() {
+			int length = 0;
+			int offset = 0;
+			
+			for(final Shape shape : this.shapes) {
+				length += shape.size();
+			}
+			
+			final float[] array0 = new float[length];
+			
+			for(final Shape shape : this.shapes) {
+				final float[] array1 = shape.toFloatArray();
+				
+				System.arraycopy(array1, 0, array0, offset, array1.length);
+				
+				offset += array1.length;
+			}
+			
+			return array0;
+		}
+		
+		public void addShape(final Shape shape) {
+			this.shapes.add(Objects.requireNonNull(shape, "shape == null"));
+		}
+	}
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	private static interface Shape {
+		float getType();
+		
+		float[] toFloatArray();
+		
+		int size();
+	}
+	
+	private static final class Sphere implements Shape {
+		private final float b;
+		private final float g;
+		private final float r;
+		private final float radius;
+		private final float x;
+		private final float y;
+		private final float z;
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		public Sphere(final float x, final float y, final float z, final float radius, final float r, final float g, final float b) {
+			this.x = x;
+			this.y = y;
+			this.z = z;
+			this.radius = radius;
+			this.r = r;
+			this.g = g;
+			this.b = b;
+		}
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		@Override
+		public float getType() {
+			return TYPE_SPHERE;
+		}
+		
+		@Override
+		public float[] toFloatArray() {
+			return new float[] {
+				getType(),
+				size(),
+				this.x,
+				this.y,
+				this.z,
+				this.radius,
+				this.r,
+				this.g,
+				this.b
+			};
+		}
+		
+		@Override
+		public int size() {
+			return SIZE_OF_SPHERE_IN_SHAPES;
 		}
 	}
 }
