@@ -55,7 +55,7 @@ import com.amd.aparapi.Range;
 /**
  * An OpenCL-based Ray Caster using Aparapi.
  * <p>
- * The values in the {@code float} array {@code camera} consists of Eye X, Eye Y, Eye Z, Up X, Up Y, Up Z, Look-at X, Look-at Y, Look-at Z, ONB-U X, ONB-U Y, ONB-U Z, ONB-V X, ONB-V Y, ONB-V Z, ONB-W X, ONB-W Y, ONB-W Z and View-plane distance.
+ * The values in the {@code float} array {@code cameraValues} consists of Eye X, Eye Y, Eye Z, Up X, Up Y, Up Z, Look-at X, Look-at Y, Look-at Z, ONB-U X, ONB-U Y, ONB-U Z, ONB-V X, ONB-V Y, ONB-V Z, ONB-W X, ONB-W Y, ONB-W Z and View-plane distance.
  * <p>
  * If you don't know what ONB stands for, then it is OrthoNormal Basis.
  * <p>
@@ -97,27 +97,30 @@ public final class RayCaster extends Kernel implements KeyListener {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+//	The following variables are only used by the CPU:
 	private final boolean[] isKeyPressed;
 	private final BufferedImage bufferedImage;
 	private final Camera camera;
-	private final float[] cameraArray;
+	private final FPSCounter fPSCounter;
+	private final JFrame jFrame;
+	private final Range range;
+	
+//	The following variables are used by the GPU (and if not all, at least a few are also used by the CPU):
+	private final float[] cameraValues;
 	private final float[] intersections;
 	private final float[] rays;
 	private final float[] shapes;
-	private final FPSCounter fPSCounter;
 	private final int height;
 	private final int shapesLength;
 	private final int width;
 	private final int[] rGB;
-	private final JFrame jFrame;
-	private final Range range;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	private RayCaster() {
 		this.bufferedImage = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
 		this.camera = new Camera();
-		this.cameraArray = this.camera.getArray();
+		this.cameraValues = this.camera.getArray();
 		this.fPSCounter = new FPSCounter();
 		this.height = this.bufferedImage.getHeight();
 		this.intersections = doCreateIntersections(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
@@ -140,7 +143,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 	 */
 	@Override
 	public void keyTyped(final KeyEvent e) {
-		
+//		Do nothing here.
 	}
 	
 	/**
@@ -178,12 +181,12 @@ public final class RayCaster extends Kernel implements KeyListener {
 		final float v = index / this.width - this.height / 2.0F + 0.5F;
 		
 //		Update the origin point and direction vector of the ray to fire:
-		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 0] = this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 0];
-		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 1] = this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 1];
-		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 2] = this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 2];
-		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 0] = this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 0] * u + this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 0] * v - this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 0] * this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
-		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 1] = this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 1] * u + this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 1] * v - this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 1] * this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
-		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 2] = this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 2] * u + this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 2] * v - this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 2] * this.cameraArray[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
+		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 0] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 0];
+		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 1] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 1];
+		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 2] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 2];
+		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 0] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 0] * u + this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 0] * v - this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 0] * this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
+		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 1] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 1] * u + this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 1] * v - this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 1] * this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
+		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 2] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 2] * u + this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 2] * v - this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 2] * this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
 		
 //		Normalize the ray direction vector:
 		doNormalize(this.rays, raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS);
@@ -231,8 +234,8 @@ public final class RayCaster extends Kernel implements KeyListener {
 //			Update the current frame:
 			doUpdate();
 			
-//			Tell the API to fetch the camera array and its values before executing this Kernel instance (it will be transferred to the GPU every cycle):
-			put(this.cameraArray);
+//			Tell the API to fetch the camera values before executing this Kernel instance (it will be transferred to the GPU every cycle):
+			put(this.cameraValues);
 			
 //			Execute this Kernel instance:
 			execute(this.range);
