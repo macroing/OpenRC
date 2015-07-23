@@ -188,90 +188,45 @@ public final class RayCaster extends Kernel implements KeyListener {
 	 */
 	@Override
 	public void run() {
-//		Initialize index, coordinate and offset values:
+//		Initialize index and offset values:
 		final int index = getGlobalId();
-		final int intersectionOffset = index * SIZE_OF_INTERSECTION_IN_INTERSECTIONS;
-		final int raysOffset = index * SIZE_OF_RAY_IN_RAYS;
+		final int rayOffset = index * SIZE_OF_RAY_IN_RAYS;
 		
 //		Initialize the U- and V-coordinates:
 		final float u = index % this.width - this.width / 2.0F + 0.5F;
 		final float v = index / this.width - this.height / 2.0F + 0.5F;
 		
 //		Update the origin point and direction vector of the ray to fire:
-		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 0] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 0];
-		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 1] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 1];
-		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 2] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 2];
-		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 0] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 0] * u + this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 0] * v - this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 0] * this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
-		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 1] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 1] * u + this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 1] * v - this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 1] * this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
-		this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 2] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 2] * u + this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 2] * v - this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 2] * this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
+		this.rays[rayOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 0] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 0];
+		this.rays[rayOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 1] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 1];
+		this.rays[rayOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 2] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 2];
+		this.rays[rayOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 0] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 0] * u + this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 0] * v - this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 0] * this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
+		this.rays[rayOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 1] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 1] * u + this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 1] * v - this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 1] * this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
+		this.rays[rayOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 2] = this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 2] * u + this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 2] * v - this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 2] * this.cameraValues[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
 		
 //		Normalize the ray direction vector:
-		doNormalize(this.rays, raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS);
+		doNormalize(this.rays, rayOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS);
 		
-//		Calculate the distance to the closest sphere:
+//		Calculate the distance to the closest shape, if any:
 		final float distance = doGetIntersection();
 		
-		int shapeOffset = -1;
-		
-		float lightType = 0.0F;
-		float lightSize = 0.0F;
-		float pointLightX = 0.0F;
-		float pointLightY = 0.0F;
-		float pointLightZ = 0.0F;
-		float pointLightDistanceFalloff = 0.0F;
-		float pointLightDirectionX = 0.0F;
-		float pointLightDirectionY = 0.0F;
-		float pointLightDirectionZ = 0.0F;
-		float length = 0.0F;
-		float dotProduct = 0.0F;
-		
-//		Initialize values from the intersection:
-		final float surfaceIntersectionX = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0];
-		final float surfaceIntersectionY = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1];
-		final float surfaceIntersectionZ = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2];
-		final float surfaceNormalX = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0];
-		final float surfaceNormalY = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1];
-		final float surfaceNormalZ = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2];
-		
+//		Initialize the RGB-values of the current pixel to black:
 		float r = 0.0F;
 		float g = 0.0F;
 		float b = 0.0F;
-		float shading = 1.0F;
 		
 		if(distance > 0.0F && distance < MAXIMUM_DISTANCE) {
-//			Fetch the offset of the intersected shape from the intersections array:
-			shapeOffset = (int)(this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS]);
+//			Initialize needed offset values:
+			final int intersectionOffset = index * SIZE_OF_INTERSECTION_IN_INTERSECTIONS;
+			final int shapeOffset = (int)(this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS]);
 			
-			for(int i = 0; i < this.lightsLength; i += lightSize) {
-				lightType = this.lights[i + RELATIVE_OFFSET_OF_LIGHT_TYPE_SCALAR_IN_LIGHTS];
-				lightSize = this.lights[i + RELATIVE_OFFSET_OF_LIGHT_SIZE_SCALAR_IN_LIGHTS];
-				
-				if(lightType == TYPE_POINT_LIGHT) {
-					pointLightX = this.lights[i + RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION_POINT_IN_LIGHTS + 0];
-					pointLightY = this.lights[i + RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION_POINT_IN_LIGHTS + 1];
-					pointLightZ = this.lights[i + RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION_POINT_IN_LIGHTS + 2];
-					pointLightDistanceFalloff = this.lights[i + RELATIVE_OFFSET_OF_POINT_LIGHT_DISTANCE_FALLOFF_SCALAR_IN_LIGHTS];
-					
-					pointLightDirectionX = pointLightX - surfaceIntersectionX;
-					pointLightDirectionY = pointLightY - surfaceIntersectionY;
-					pointLightDirectionZ = pointLightZ - surfaceIntersectionZ;
-					
-					length = 1.0F / sqrt(pointLightDirectionX * pointLightDirectionX + pointLightDirectionY * pointLightDirectionY + pointLightDirectionZ * pointLightDirectionZ);
-					
-					pointLightDirectionX *= length;
-					pointLightDirectionY *= length;
-					pointLightDirectionZ *= length;
-					
-					dotProduct = max(pointLightDirectionX * surfaceNormalX + pointLightDirectionY * surfaceNormalY + pointLightDirectionZ * surfaceNormalZ, 0.1F);
-					
-					shading = dotProduct;
-				}
-			}
+//			Calculate the shading for the intersected shape at the surface intersection point:
+			final float shading = doCalculateShading( intersectionOffset, shapeOffset);
 			
 //			Update the RGB-values of the current pixel, given the RGB-values of the intersected shape:
-			r = (int)(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 0] * shading);
-			g = (int)(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 1] * shading);
-			b = (int)(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 2] * shading);
+			r = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 0] * shading;
+			g = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 1] * shading;
+			b = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 2] * shading;
 		}
 		
 //		Set the RGB-value of the current pixel:
@@ -331,11 +286,59 @@ public final class RayCaster extends Kernel implements KeyListener {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+	private float doCalculateShading(final int intersectionOffset, final int shapeOffset) {
+//		Initialize the shading value:
+		float shading = 0.0F;
+		
+//		Initialize values from the intersection:
+		final float surfaceIntersectionX = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0];
+		final float surfaceIntersectionY = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1];
+		final float surfaceIntersectionZ = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2];
+		final float surfaceNormalX = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0];
+		final float surfaceNormalY = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1];
+		final float surfaceNormalZ = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2];
+		
+		for(int i = 0, j = 0; i < this.lightsLength; i += j) {
+//			Initialize the temporary type and size variables of the current light:
+			final float lightType = this.lights[i + RELATIVE_OFFSET_OF_LIGHT_TYPE_SCALAR_IN_LIGHTS];
+			final float lightSize = this.lights[i + RELATIVE_OFFSET_OF_LIGHT_SIZE_SCALAR_IN_LIGHTS];
+			
+//			Set the light size as increment for the next loop iteration:
+			j = (int)(lightSize);
+			
+			if(lightType == TYPE_POINT_LIGHT) {
+//				Initialize the temporary X-, Y-, Z- and distance falloff variables of the current point light:
+				final float pointLightX = this.lights[i + RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION_POINT_IN_LIGHTS + 0];
+				final float pointLightY = this.lights[i + RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION_POINT_IN_LIGHTS + 1];
+				final float pointLightZ = this.lights[i + RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION_POINT_IN_LIGHTS + 2];
+				final float pointLightDistanceFalloff = this.lights[i + RELATIVE_OFFSET_OF_POINT_LIGHT_DISTANCE_FALLOFF_SCALAR_IN_LIGHTS];
+				
+//				Calculate the delta values between the current light and the surface intersection point of the shape:
+				float dx = pointLightX - surfaceIntersectionX;
+				float dy = pointLightY - surfaceIntersectionY;
+				float dz = pointLightZ - surfaceIntersectionZ;
+				
+//				Calculate the length reciprocal of the vector produced by the delta values:
+				final float lengthReciprocal = 1.0F / sqrt(dx * dx + dy * dy + dz * dz);
+				
+//				Multiply the delta values with the length reciprocal to normalize it:
+				dx *= lengthReciprocal;
+				dy *= lengthReciprocal;
+				dz *= lengthReciprocal;
+				
+//				Calculate the shading as the maximum value of 0.1 and the dot product of the delta vector and the surface normal vector:
+				shading = max(dx * surfaceNormalX + dy * surfaceNormalY + dz * surfaceNormalZ, 0.1F);
+			}
+		}
+		
+		return shading;
+	}
+	
 	private float doGetIntersection() {
 //		Initialize the index and offset values:
 		final int index = getGlobalId();
 		final int intersectionOffset = index * SIZE_OF_INTERSECTION_IN_INTERSECTIONS;
-		final int raysOffset = index * SIZE_OF_RAY_IN_RAYS;
+		final int rayOffset = index * SIZE_OF_RAY_IN_RAYS;
 		
 //		Initialize offset to closest shape:
 		int shapeClosestOffset = -1;
@@ -344,64 +347,45 @@ public final class RayCaster extends Kernel implements KeyListener {
 		float shapeClosestDistance = MAXIMUM_DISTANCE;
 		
 //		Initialize the ray values:
-		final float rayOriginX = this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 0];
-		final float rayOriginY = this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 1];
-		final float rayOriginZ = this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 2];
-		final float rayDirectionX = this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 0];
-		final float rayDirectionY = this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 1];
-		final float rayDirectionZ = this.rays[raysOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 2];
+		final float rayOriginX = this.rays[rayOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 0];
+		final float rayOriginY = this.rays[rayOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 1];
+		final float rayOriginZ = this.rays[rayOffset + RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS + 2];
+		final float rayDirectionX = this.rays[rayOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 0];
+		final float rayDirectionY = this.rays[rayOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 1];
+		final float rayDirectionZ = this.rays[rayOffset + RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 2];
 		
-//		Initialize the temporary shape intersection values:
-		float shapeType = 0.0F;
-		float shapeSize = 0.0F;
-		float shapeDistance = MAXIMUM_DISTANCE;
-		float sphereX = 0.0F;
-		float sphereY = 0.0F;
-		float sphereZ = 0.0F;
-		float sphereRadius = 0.0F;
-		
-//		Initialize the temporary delta values:
-		float dx = 0.0F;
-		float dy = 0.0F;
-		float dz = 0.0F;
-		
-//		Initialize other temporarily used values:
-		float b = 0.0F;
-		float discriminant = 0.0F;
-		float surfaceNormalX = 0.0F;
-		float surfaceNormalY = 0.0F;
-		float surfaceNormalZ = 0.0F;
-		float length = 0.0F;
-		float x = 0.0F;
-		float y = 0.0F;
-		float z = 0.0F;
-		
-//		Reset the float array spheresIntersected, so we can perform a new intersection test:
+//		Reset the float array intersections, so we can perform a new intersection test:
 		this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS] = -1.0F;
 		this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS] = MAXIMUM_DISTANCE;
 		
-		for(int i = 0; i < this.shapesLength; i += shapeSize) {
-//			Update the temporary type and size values of the current shape to our temporary variables:
-			shapeType = this.shapes[i + RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES];
-			shapeSize = this.shapes[i + RELATIVE_OFFSET_OF_SHAPE_SIZE_SCALAR_IN_SHAPES];
+		for(int i = 0, j = 0; i < this.shapesLength; i += j) {
+//			Initialize the temporary type and size variables of the current shape:
+			final float shapeType = this.shapes[i + RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES];
+			final float shapeSize = this.shapes[i + RELATIVE_OFFSET_OF_SHAPE_SIZE_SCALAR_IN_SHAPES];
+			
+//			Set the shape size as increment for the next loop iteration:
+			j = (int)(shapeSize);
+			
+//			Initialize the shape distance to the maximum value:
+			float shapeDistance = MAXIMUM_DISTANCE;
 			
 			if(shapeType == TYPE_SPHERE) {
-//				Update the temporary X-, Y-, Z- and radius values of the current sphere to our temporary variables:
-				sphereX = this.shapes[i + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 0];
-				sphereY = this.shapes[i + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 1];
-				sphereZ = this.shapes[i + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 2];
-				sphereRadius = this.shapes[i + RELATIVE_OFFSET_OF_SPHERE_RADIUS_SCALAR_IN_SHAPES];
+//				Initialize the temporary X-, Y-, Z- and radius variables of the current sphere:
+				final float sphereX = this.shapes[i + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 0];
+				final float sphereY = this.shapes[i + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 1];
+				final float sphereZ = this.shapes[i + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 2];
+				final float sphereRadius = this.shapes[i + RELATIVE_OFFSET_OF_SPHERE_RADIUS_SCALAR_IN_SHAPES];
 				
 //				Calculate the delta values between the current sphere and the origin of the camera:
-				dx = sphereX - rayOriginX;
-				dy = sphereY - rayOriginY;
-				dz = sphereZ - rayOriginZ;
+				final float dx = sphereX - rayOriginX;
+				final float dy = sphereY - rayOriginY;
+				final float dz = sphereZ - rayOriginZ;
 				
 //				Calculate the dot product:
-				b = dx * rayDirectionX + dy * rayDirectionY + dz * rayDirectionZ;
+				final float b = dx * rayDirectionX + dy * rayDirectionY + dz * rayDirectionZ;
 				
 //				Calculate the discriminant:
-				discriminant = b * b - (dx * dx + dy * dy + dz * dz) + sphereRadius * sphereRadius;
+				float discriminant = b * b - (dx * dx + dy * dy + dz * dz) + sphereRadius * sphereRadius;
 				
 				if(discriminant >= 0.0F) {
 //					Recalculate the discriminant:
@@ -430,6 +414,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		}
 		
 		if(shapeClosestOffset > -1) {
+//			Update the intersections array with values found:
 			this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS] = shapeClosestOffset;
 			this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS] = shapeClosestDistance;
 			this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0] = rayOriginX + rayDirectionX * shapeClosestDistance;
@@ -437,24 +422,35 @@ public final class RayCaster extends Kernel implements KeyListener {
 			this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2] = rayOriginZ + rayDirectionZ * shapeClosestDistance;
 			
 			if(this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES] == TYPE_SPHERE) {
-				sphereX = this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 0];
-				sphereY = this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 1];
-				sphereZ = this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 2];
+//				Initialize variables with the position of the sphere:
+				final float sphereX = this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 0];
+				final float sphereY = this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 1];
+				final float sphereZ = this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 2];
 				
-				x = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0] - sphereX;
-				y = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1] - sphereY;
-				z = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2] - sphereZ;
+//				Initialize variables with the delta values between the surface intersection point and the center of the sphere:
+				final float dx = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0] - sphereX;
+				final float dy = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1] - sphereY;
+				final float dz = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2] - sphereZ;
 				
-				length = sqrt(x * x + y * y + z * z);
+//				Calculate the length of the delta vector:
+				final float length = sqrt(dx * dx + dy * dy + dz * dz);
+				
+//				Initialize variables with the surface normal vector:
+				float surfaceNormalX = 0.0F;
+				float surfaceNormalY = 0.0F;
+				float surfaceNormalZ = 0.0F;
 				
 				if(length > 0.0F) {
-					length = 1.0F / length;
+//					//Calculate the length reciprocal:
+					final float lengthReciprocal = 1.0F / length;
 					
-					surfaceNormalX = x * length;
-					surfaceNormalY = y * length;
-					surfaceNormalZ = z * length;
+//					Set the surface normal vector to the delta vector multiplied with the length reciprocal:
+					surfaceNormalX = dx * lengthReciprocal;
+					surfaceNormalY = dy * lengthReciprocal;
+					surfaceNormalZ = dz * lengthReciprocal;
 				}
 				
+//				Update the intersections array with the surface normal vector:
 				this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0] = surfaceNormalX;
 				this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1] = surfaceNormalY;
 				this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2] = surfaceNormalZ;
