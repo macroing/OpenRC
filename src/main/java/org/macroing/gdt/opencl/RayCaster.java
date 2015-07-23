@@ -39,6 +39,7 @@ import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -421,6 +422,10 @@ public final class RayCaster extends Kernel implements KeyListener {
 		return doDotProduct(vector, offset, vector, offset);
 	}
 	
+	private static float doRandom(final float range) {
+		return ThreadLocalRandom.current().nextFloat() * range;
+	}
+	
 	private static float[] doCreateIntersections(final int length) {
 		final float[] intersections = new float[length * SIZE_OF_INTERSECTION_IN_INTERSECTIONS];
 		
@@ -483,12 +488,17 @@ public final class RayCaster extends Kernel implements KeyListener {
 	}
 	
 	private static Scene doCreateScene() {
-		final
-		Scene scene = new Scene();
-		scene.addShape(new Sphere(27.0F, 16.5F, 47.0F, 16.5F, 100.0F, 200.0F, 255.0F));
-		scene.addShape(new Sphere(73.0F, 16.5F, 78.0F, 16.5F, 255.0F, 200.0F, 100.0F));
+		final Scene scene = new Scene();
+		
+		for(int i = 0; i < 500; i++) {
+			scene.addShape(doCreateRandomSphere());
+		}
 		
 		return scene;
+	}
+	
+	private static Sphere doCreateRandomSphere() {
+		return new Sphere(doRandom(4000.0F), 16.5F, doRandom(4000.0F), 16.5F, doRandom(255.0F), doRandom(255.0F), doRandom(255.0F));
 	}
 	
 	private static void doCrossProduct(final float[] vector0, final int offset0, final float[] vector1, final int offset1, final float[] vector2, final int offset2) {
