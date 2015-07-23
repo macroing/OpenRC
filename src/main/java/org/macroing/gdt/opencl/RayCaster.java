@@ -62,6 +62,8 @@ import com.amd.aparapi.Range;
  * <p>
  * The values in the {@code float} array {@code intersections} consists of Shape Offset and Distance (T), for each shape currently being intersected by a ray.
  * <p>
+ * The values in the {@code float} array {@code lights} consists of Type, Size and {@code float}[Size], for each light defined.
+ * <p>
  * The values in the {@code float} array {@code rays} consists of Origin X, Origin Y, Origin Z, Direction X, Direction Y and Direction Z, for each ray fired from each pixel.
  * <p>
  * The values in the {@code float} array {@code shapes} consists of Type, Size and {@code float}[Size], for each shape defined.
@@ -72,6 +74,7 @@ import com.amd.aparapi.Range;
 public final class RayCaster extends Kernel implements KeyListener {
 	private static final float EPSILON = 1.e-4F;
 	private static final float MAXIMUM_DISTANCE = Float.MAX_VALUE;
+	private static final float TYPE_POINT_LIGHT = 1.0F;
 	private static final float TYPE_SPHERE = 1.0F;
 	private static final int ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT = 0;
 	private static final int ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR = 6;
@@ -83,6 +86,12 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private static final int HEIGHT = 768;
 	private static final int RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS = 1;
 	private static final int RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS = 0;
+	private static final int RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS = 2;
+	private static final int RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS = 5;
+	private static final int RELATIVE_OFFSET_OF_LIGHT_TYPE_SCALAR_IN_LIGHTS = 0;
+	private static final int RELATIVE_OFFSET_OF_LIGHT_SIZE_SCALAR_IN_LIGHTS = 1;
+	private static final int RELATIVE_OFFSET_OF_POINT_LIGHT_DISTANCE_FALLOFF_SCALAR_IN_LIGHTS = 5;
+	private static final int RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION_POINT_IN_LIGHTS = 2;
 	private static final int RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS = 3;
 	private static final int RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS = 0;
 	private static final int RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES = 0;
@@ -91,7 +100,8 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private static final int RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES = 2;
 	private static final int RELATIVE_OFFSET_OF_SPHERE_RADIUS_SCALAR_IN_SHAPES = 5;
 	private static final int SIZE_OF_CAMERA = 3 + 3 + 3 + 3 + 3 + 3 + 1;
-	private static final int SIZE_OF_INTERSECTION_IN_INTERSECTIONS = 1 + 1;
+	private static final int SIZE_OF_INTERSECTION_IN_INTERSECTIONS = 1 + 1 + 3 + 3;
+	private static final int SIZE_OF_POINT_LIGHT_IN_LIGHTS = 1 + 1 + 3 + 1;
 	private static final int SIZE_OF_RAY_IN_RAYS = 3 + 3;
 	private static final int SIZE_OF_SPHERE_IN_SHAPES = 1 + 1 + 3 + 1 + 3;
 	private static final int WIDTH = 1024;
@@ -109,9 +119,11 @@ public final class RayCaster extends Kernel implements KeyListener {
 //	The following variables are used by the GPU (and if not all, at least a few are also used by the CPU):
 	private final float[] cameraValues;
 	private final float[] intersections;
+	private final float[] lights;
 	private final float[] rays;
 	private final float[] shapes;
 	private final int height;
+	private final int lightsLength;
 	private final int shapesLength;
 	private final int width;
 	private final int[] rGB;
@@ -119,6 +131,8 @@ public final class RayCaster extends Kernel implements KeyListener {
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	private RayCaster() {
+		final Scene scene = doCreateScene();
+		
 		this.bufferedImage = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
 		this.camera = new Camera();
 		this.cameraValues = this.camera.getArray();
@@ -127,10 +141,12 @@ public final class RayCaster extends Kernel implements KeyListener {
 		this.intersections = doCreateIntersections(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
 		this.isKeyPressed = new boolean[256];
 		this.jFrame = doCreateJFrame(this.bufferedImage, this.camera, this.fPSCounter);
+		this.lights = scene.toLightArray();
+		this.lightsLength = this.lights.length;
 		this.range = Range.create(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
 		this.rays = doCreateRays(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
 		this.rGB = toRGB(this.bufferedImage);
-		this.shapes = doCreateScene().toFloatArray();
+		this.shapes = scene.toShapeArray();
 		this.shapesLength = this.shapes.length;
 		this.width = this.bufferedImage.getWidth();
 	}
@@ -197,22 +213,69 @@ public final class RayCaster extends Kernel implements KeyListener {
 		
 		int shapeOffset = -1;
 		
-		int r = 0;
-		int g = 0;
-		int b = 0;
+		float lightType = 0.0F;
+		float lightSize = 0.0F;
+		float pointLightX = 0.0F;
+		float pointLightY = 0.0F;
+		float pointLightZ = 0.0F;
+		float pointLightDistanceFalloff = 0.0F;
+		float pointLightDirectionX = 0.0F;
+		float pointLightDirectionY = 0.0F;
+		float pointLightDirectionZ = 0.0F;
+		float length = 0.0F;
+		float dotProduct = 0.0F;
+		
+//		Initialize values from the intersection:
+		final float surfaceIntersectionX = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0];
+		final float surfaceIntersectionY = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1];
+		final float surfaceIntersectionZ = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2];
+		final float surfaceNormalX = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0];
+		final float surfaceNormalY = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1];
+		final float surfaceNormalZ = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2];
+		
+		float r = 0.0F;
+		float g = 0.0F;
+		float b = 0.0F;
+		float shading = 1.0F;
 		
 		if(distance > 0.0F && distance < MAXIMUM_DISTANCE) {
 //			Fetch the offset of the intersected shape from the intersections array:
 			shapeOffset = (int)(this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS]);
 			
+			for(int i = 0; i < this.lightsLength; i += lightSize) {
+				lightType = this.lights[i + RELATIVE_OFFSET_OF_LIGHT_TYPE_SCALAR_IN_LIGHTS];
+				lightSize = this.lights[i + RELATIVE_OFFSET_OF_LIGHT_SIZE_SCALAR_IN_LIGHTS];
+				
+				if(lightType == TYPE_POINT_LIGHT) {
+					pointLightX = this.lights[i + RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION_POINT_IN_LIGHTS + 0];
+					pointLightY = this.lights[i + RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION_POINT_IN_LIGHTS + 1];
+					pointLightZ = this.lights[i + RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION_POINT_IN_LIGHTS + 2];
+					pointLightDistanceFalloff = this.lights[i + RELATIVE_OFFSET_OF_POINT_LIGHT_DISTANCE_FALLOFF_SCALAR_IN_LIGHTS];
+					
+					pointLightDirectionX = pointLightX - surfaceIntersectionX;
+					pointLightDirectionY = pointLightY - surfaceIntersectionY;
+					pointLightDirectionZ = pointLightZ - surfaceIntersectionZ;
+					
+					length = 1.0F / sqrt(pointLightDirectionX * pointLightDirectionX + pointLightDirectionY * pointLightDirectionY + pointLightDirectionZ * pointLightDirectionZ);
+					
+					pointLightDirectionX *= length;
+					pointLightDirectionY *= length;
+					pointLightDirectionZ *= length;
+					
+					dotProduct = max(pointLightDirectionX * surfaceNormalX + pointLightDirectionY * surfaceNormalY + pointLightDirectionZ * surfaceNormalZ, 0.1F);
+					
+					shading = dotProduct;
+				}
+			}
+			
 //			Update the RGB-values of the current pixel, given the RGB-values of the intersected shape:
-			r = (int)(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 0]);
-			g = (int)(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 1]);
-			b = (int)(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 2]);
+			r = (int)(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 0] * shading);
+			g = (int)(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 1] * shading);
+			b = (int)(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 2] * shading);
 		}
 		
 //		Set the RGB-value of the current pixel:
-		this.rGB[index] = doToRGB(r, g, b);
+		this.rGB[index] = doToRGB((int)(r), (int)(g), (int)(b));
 	}
 	
 	/**
@@ -227,6 +290,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		
 //		Tell the API to fetch the below arrays and their values before executing this Kernel instance (they will be transferred to the GPU):
 		put(this.intersections);
+		put(this.lights);
 		put(this.rays);
 		put(this.shapes);
 		put(this.rGB);
@@ -304,6 +368,13 @@ public final class RayCaster extends Kernel implements KeyListener {
 //		Initialize other temporarily used values:
 		float b = 0.0F;
 		float discriminant = 0.0F;
+		float surfaceNormalX = 0.0F;
+		float surfaceNormalY = 0.0F;
+		float surfaceNormalZ = 0.0F;
+		float length = 0.0F;
+		float x = 0.0F;
+		float y = 0.0F;
+		float z = 0.0F;
 		
 //		Reset the float array spheresIntersected, so we can perform a new intersection test:
 		this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS] = -1.0F;
@@ -361,6 +432,33 @@ public final class RayCaster extends Kernel implements KeyListener {
 		if(shapeClosestOffset > -1) {
 			this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS] = shapeClosestOffset;
 			this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS] = shapeClosestDistance;
+			this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0] = rayOriginX + rayDirectionX * shapeClosestDistance;
+			this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1] = rayOriginY + rayDirectionY * shapeClosestDistance;
+			this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2] = rayOriginZ + rayDirectionZ * shapeClosestDistance;
+			
+			if(this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES] == TYPE_SPHERE) {
+				sphereX = this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 0];
+				sphereY = this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 1];
+				sphereZ = this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 2];
+				
+				x = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0] - sphereX;
+				y = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1] - sphereY;
+				z = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2] - sphereZ;
+				
+				length = sqrt(x * x + y * y + z * z);
+				
+				if(length > 0.0F) {
+					length = 1.0F / length;
+					
+					surfaceNormalX = x * length;
+					surfaceNormalY = y * length;
+					surfaceNormalZ = z * length;
+				}
+				
+				this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0] = surfaceNormalX;
+				this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1] = surfaceNormalY;
+				this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2] = surfaceNormalZ;
+			}
 		}
 		
 		return shapeClosestDistance;
@@ -432,6 +530,12 @@ public final class RayCaster extends Kernel implements KeyListener {
 		for(int i = 0; i < intersections.length; i += SIZE_OF_INTERSECTION_IN_INTERSECTIONS) {
 			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS] = -1.0F;
 			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS] = MAXIMUM_DISTANCE;
+			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0] = 0.0F;
+			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1] = 0.0F;
+			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2] = 0.0F;
+			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0] = 0.0F;
+			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1] = 0.0F;
+			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2] = 0.0F;
 		}
 		
 		return intersections;
@@ -488,7 +592,12 @@ public final class RayCaster extends Kernel implements KeyListener {
 	}
 	
 	private static Scene doCreateScene() {
-		final Scene scene = new Scene();
+		final
+		Scene scene = new Scene();
+		scene.addLight(new PointLight(100.0F, 20.0F, 100.0F, 100.0F));
+		scene.addLight(new PointLight(200.0F, 20.0F, 200.0F, 100.0F));
+		scene.addLight(new PointLight(200.0F, 20.0F, 100.0F, 100.0F));
+		scene.addLight(new PointLight(100.0F, 20.0F, 200.0F, 100.0F));
 		
 		for(int i = 0; i < 500; i++) {
 			scene.addShape(doCreateRandomSphere());
@@ -947,7 +1056,60 @@ public final class RayCaster extends Kernel implements KeyListener {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+	private static interface Light {
+		float getType();
+		
+		float[] toFloatArray();
+		
+		int size();
+	}
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	private static final class PointLight implements Light {
+		private final float distanceFalloff;
+		private final float x;
+		private final float y;
+		private final float z;
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		public PointLight(final float x, final float y, final float z, final float distanceFalloff) {
+			this.x = x;
+			this.y = y;
+			this.z = z;
+			this.distanceFalloff = distanceFalloff;
+		}
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		@Override
+		public float getType() {
+			return TYPE_POINT_LIGHT;
+		}
+		
+		@Override
+		public float[] toFloatArray() {
+			return new float[] {
+				getType(),
+				size(),
+				this.x,
+				this.y,
+				this.z,
+				this.distanceFalloff
+			};
+		}
+		
+		@Override
+		public int size() {
+			return SIZE_OF_POINT_LIGHT_IN_LIGHTS;
+		}
+	}
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
 	private static final class Scene {
+		private final List<Light> lights = new ArrayList<>();
 		private final List<Shape> shapes = new ArrayList<>();
 		
 		////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -958,7 +1120,28 @@ public final class RayCaster extends Kernel implements KeyListener {
 		
 		////////////////////////////////////////////////////////////////////////////////////////////////////
 		
-		public float[] toFloatArray() {
+		public float[] toLightArray() {
+			int length = 0;
+			int offset = 0;
+			
+			for(final Light light : this.lights) {
+				length += light.size();
+			}
+			
+			final float[] array0 = new float[length];
+			
+			for(final Light light : this.lights) {
+				final float[] array1 = light.toFloatArray();
+				
+				System.arraycopy(array1, 0, array0, offset, array1.length);
+				
+				offset += array1.length;
+			}
+			
+			return array0;
+		}
+		
+		public float[] toShapeArray() {
 			int length = 0;
 			int offset = 0;
 			
@@ -977,6 +1160,10 @@ public final class RayCaster extends Kernel implements KeyListener {
 			}
 			
 			return array0;
+		}
+		
+		public void addLight(final Light light) {
+			this.lights.add(Objects.requireNonNull(light, "light == null"));
 		}
 		
 		public void addShape(final Shape shape) {
