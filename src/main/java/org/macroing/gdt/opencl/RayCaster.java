@@ -34,7 +34,10 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferInt;
 import java.awt.image.WritableRaster;
+import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
+import java.io.UncheckedIOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.List;
@@ -45,6 +48,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
+import javax.imageio.ImageIO;
 import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -74,6 +78,7 @@ import com.amd.aparapi.Range;
 public final class RayCaster extends Kernel implements KeyListener {
 	private static final float EPSILON = 1.e-4F;
 	private static final float MAXIMUM_DISTANCE = Float.MAX_VALUE;
+	private static final float PI = (float)(Math.PI);
 	private static final float TYPE_POINT_LIGHT = 1.0F;
 	private static final float TYPE_SPHERE = 1.0F;
 	private static final int ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT = 0;
@@ -125,13 +130,18 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private final int height;
 	private final int lightsLength;
 	private final int shapesLength;
+	private final int textureHeight;
+	private final int textureWidth;
 	private final int width;
 	private final int[] rGB;
+	private final int[] texture;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	private RayCaster() {
 		final Scene scene = doCreateScene();
+		
+		final Texture texture = Texture.create(new File("resources/jar/org/macroing/gdt/opencl/Texture.jpg"));
 		
 		this.bufferedImage = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
 		this.camera = new Camera();
@@ -148,6 +158,9 @@ public final class RayCaster extends Kernel implements KeyListener {
 		this.rGB = toRGB(this.bufferedImage);
 		this.shapes = scene.toShapeArray();
 		this.shapesLength = this.shapes.length;
+		this.texture = texture.getData();
+		this.textureHeight = texture.getHeight();
+		this.textureWidth = texture.getWidth();
 		this.width = this.bufferedImage.getWidth();
 	}
 	
@@ -221,12 +234,44 @@ public final class RayCaster extends Kernel implements KeyListener {
 			final int shapeOffset = (int)(this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS]);
 			
 //			Calculate the shading for the intersected shape at the surface intersection point:
-			final float shading = doCalculateShading( intersectionOffset, shapeOffset);
+			final float shading = doCalculateShading(intersectionOffset, shapeOffset);
+			
+			if(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES] == TYPE_SPHERE) {
+				final float sphereX = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 0];
+				final float sphereY = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 1];
+				final float sphereZ = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 2];
+				
+				final float surfaceIntersectionX = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0];
+				final float surfaceIntersectionY = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1];
+				final float surfaceIntersectionZ = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2];
+				
+				final float dx = sphereX - surfaceIntersectionX;
+				final float dy = sphereY - surfaceIntersectionY;
+				final float dz = sphereZ - surfaceIntersectionZ;
+				
+				final float lengthReciprocal = 1.0F / sqrt(dx * dx + dy * dy + dz * dz);
+				
+				final float distanceX = dx * lengthReciprocal;
+				final float distanceY = dy * lengthReciprocal;
+				final float distanceZ = dz * lengthReciprocal;
+				
+				final float textureU = 0.5F + atan2(distanceX, distanceZ) / (2.0F * PI);
+				final float textureV = 0.5F + asin(distanceY) / PI;
+				
+				final int textureX = (int)(this.textureWidth * ((textureU + 1.0F) * 0.5F));
+				final int textureY = (int)(this.textureHeight * ((textureV + 1.0F) * 0.5F));
+				final int textureIndex = textureY * this.textureWidth + textureX;
+				final int textureRGB = this.texture[textureIndex];
+				
+				r = doToR(textureRGB);
+				g = doToG(textureRGB);
+				b = doToB(textureRGB);
+			}
 			
 //			Update the RGB-values of the current pixel, given the RGB-values of the intersected shape:
-			r = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 0] * shading;
-			g = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 1] * shading;
-			b = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 2] * shading;
+			r = (r /*+ this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 0]*/) * shading;
+			g = (g /*+ this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 1]*/) * shading;
+			b = (b /*+ this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 2]*/) * shading;
 		}
 		
 //		Set the RGB-value of the current pixel:
@@ -496,6 +541,39 @@ public final class RayCaster extends Kernel implements KeyListener {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+	private static BufferedImage doCreateBufferedImageFrom(final File file) {
+		try {
+			BufferedImage bufferedImage0 = ImageIO.read(file);
+			
+			if(bufferedImage0.getType() != BufferedImage.TYPE_INT_RGB) {
+				final BufferedImage bufferedImage1 = new BufferedImage(bufferedImage0.getWidth(), bufferedImage0.getHeight(), BufferedImage.TYPE_INT_RGB);
+				
+				final
+				Graphics2D graphics2D = bufferedImage1.createGraphics();
+				graphics2D.drawImage(bufferedImage0, 0, 0, null);
+				graphics2D.dispose();
+				
+				bufferedImage0 = bufferedImage1;
+			}
+			
+			return bufferedImage0;
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+	
+	private static int[] doGetDataFrom(final BufferedImage bufferedImage) {
+		final WritableRaster writableRaster = bufferedImage.getRaster();
+		
+		final DataBuffer dataBuffer = writableRaster.getDataBuffer();
+		
+		final DataBufferInt dataBufferInt = DataBufferInt.class.cast(dataBuffer);
+		
+		final int[] data = dataBufferInt.getData();
+		
+		return data;
+	}
+	
 	private static int[] toRGB(final BufferedImage bufferedImage) {
 		final WritableRaster writableRaster = bufferedImage.getRaster();
 		
@@ -541,17 +619,14 @@ public final class RayCaster extends Kernel implements KeyListener {
 		return new float[length * SIZE_OF_RAY_IN_RAYS];
 	}
 	
-	@SuppressWarnings("unused")
 	private static int doToB(final int rGB) {
 		return (rGB >> 0) & 0xFF;
 	}
 	
-	@SuppressWarnings("unused")
 	private static int doToG(final int rGB) {
 		return (rGB >> 8) & 0xFF;
 	}
 	
-	@SuppressWarnings("unused")
 	private static int doToR(final int rGB) {
 		return (rGB >> 16) & 0xFF;
 	}
@@ -667,7 +742,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 			try {
 				SwingUtilities.invokeAndWait(runnable);
 			} catch(final InvocationTargetException | InterruptedException e) {
-				
+//				Do nothing.
 			}
 		}
 	}
@@ -700,7 +775,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		
 		@Override
 		public void addLayoutComponent(final String name, final Component component) {
-			
+//			Do nothing.
 		}
 		
 		@Override
@@ -756,7 +831,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		
 		@Override
 		public void removeLayoutComponent(final Component component) {
-			
+//			Do nothing.
 		}
 		
 		public void setUsingPreferredSize(final boolean isUsingPreferredSize) {
@@ -1177,6 +1252,8 @@ public final class RayCaster extends Kernel implements KeyListener {
 		int size();
 	}
 	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
 	private static final class Sphere implements Shape {
 		private final float b;
 		private final float g;
@@ -1223,6 +1300,49 @@ public final class RayCaster extends Kernel implements KeyListener {
 		@Override
 		public int size() {
 			return SIZE_OF_SPHERE_IN_SHAPES;
+		}
+	}
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	private static final class Texture {
+		private final int height;
+		private final int width;
+		private final int[] data;
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		private Texture(final int width, final int height, final int[] data) {
+			this.width = width;
+			this.height = height;
+			this.data = data;
+		}
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		public int getHeight() {
+			return this.height;
+		}
+		
+		public int getWidth() {
+			return this.width;
+		}
+		
+		public int[] getData() {
+			return this.data;
+		}
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		public static Texture create(final File file) {
+			final BufferedImage bufferedImage = doCreateBufferedImageFrom(file);
+			
+			final int width = bufferedImage.getWidth();
+			final int height = bufferedImage.getHeight();
+			
+			final int[] data = doGetDataFrom(bufferedImage);
+			
+			return new Texture(width, height, data);
 		}
 	}
 }
