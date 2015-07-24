@@ -8,7 +8,25 @@ This program is provided by Macroing.org.
 
 Supported Features
 ------------------
-* A very simple Ray Caster, that allows you to walk around in a very simple world, using your WASD-keys.
+* A very simple Ray Caster implementation.
+* Shapes such as spheres.
+* Lights such as point lights.
+* Textures such as normal color textures.
+* Texture mapping such as spherical texture mapping.
+
+Supported Controls
+------------------
+* Press 'A' to move left.
+* Press 'D' to move right.
+* Press 'E' to display the current execution mode (GPU or JTP*).
+* Press 'ESC' to exit.
+* Press 'S' to move backward.
+* Press 'T' to toggle between the GPU- and JTP* execution modes.
+* Press 'W' to move forward.
+
+Note: When running with the execution mode JTP*, you may have to press more than once, as it is pretty unresponsive.
+
+\* JTP stands for Java Thread Pool.
 
 Getting Started
 ---------------
