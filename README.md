@@ -2,7 +2,7 @@ GDT OpenCL (v. 0.1-beta)
 ========================
 GDT OpenCL is not a binding for OpenCL. It's a simple program for testing various graphics algorithms using a library called Aparapi, which in turn is a binding for OpenCL.
 
-![alt text](https://github.com/macroing/GDT-OpenCL/blob/master/OpenCL_RayCaster_500_Spheres_with_Shading_and_Texture_Mapping.png "Ray Caster")
+![alt text](https://github.com/macroing/GDT-OpenCL/blob/master/images/OpenCL_RayCaster_500_Spheres_with_Shading_and_Texture_Mapping.png "Ray Caster")
 
 This program is provided by Macroing.org.
 
