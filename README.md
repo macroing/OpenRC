@@ -10,6 +10,17 @@ Supported Features
 ------------------
 * A very simple Ray Caster, that allows you to walk around in a very simple world, using your WASD-keys.
 
+Getting Started
+---------------
+To clone this repository, build the project and run it, you can type the following in Git Bash. You need Apache Ant though.
+```bash
+git clone https://github.com/macroing/GDT-OpenCL.git
+cd GDT-OpenCL
+ant
+cd distribution/org.macroing.gdt.opencl-0.1-beta
+java -jar org.macroing.gdt.opencl.jar
+```
+
 Dependencies
 ------------
  - [Java 8](http://www.java.com).
