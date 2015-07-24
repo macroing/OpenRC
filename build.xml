@@ -6,7 +6,7 @@
 	<property name="project.class.classpath" value=". ./aparapi.jar"/>
 	<property name="project.class.main" value="org.macroing.gdt.opencl.RayCaster"/>
 	<property name="project.version" value="0.1-beta"/>
-	<property name="root.directory" location="../.."/>
+	<property name="root.directory" location="."/>
 	<property name="vendor.name" value="Macroing.org"/>
 	
 <!--The following properties are based on the above properties and don't really need to change.-->
