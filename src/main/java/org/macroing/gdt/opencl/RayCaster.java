@@ -34,8 +34,9 @@ import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferInt;
 import java.awt.image.WritableRaster;
-import java.io.File;
+import java.io.BufferedInputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.io.Serializable;
 import java.io.UncheckedIOException;
 import java.lang.reflect.InvocationTargetException;
@@ -169,7 +170,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private RayCaster() {
 		final Scene scene = doCreateScene();
 		
-		final Texture texture = Texture.create(new File("resources/jar/org/macroing/gdt/opencl/Texture.jpg"));
+		final Texture texture = doCreateTexture("Texture.jpg");
 		
 		this.bufferedImage = new BufferedImage(WIDTH, HEIGHT, BufferedImage.TYPE_INT_RGB);
 		this.camera = new Camera();
@@ -597,9 +598,9 @@ public final class RayCaster extends Kernel implements KeyListener {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	private static BufferedImage doCreateBufferedImageFrom(final File file) {
-		try {
-			BufferedImage bufferedImage0 = ImageIO.read(file);
+	private static BufferedImage doCreateBufferedImageFrom(final InputStream inputStream) {
+		try(final BufferedInputStream bufferedInputStream = new BufferedInputStream(inputStream)) {
+			BufferedImage bufferedImage0 = ImageIO.read(bufferedInputStream);
 			
 			if(bufferedImage0.getType() != BufferedImage.TYPE_INT_RGB) {
 				final BufferedImage bufferedImage1 = new BufferedImage(bufferedImage0.getWidth(), bufferedImage0.getHeight(), BufferedImage.TYPE_INT_RGB);
@@ -735,6 +736,15 @@ public final class RayCaster extends Kernel implements KeyListener {
 	
 	private static Sphere doCreateRandomSphere() {
 		return new Sphere(doRandom(4000.0F), 16.5F, doRandom(4000.0F), 16.5F, doRandom(255.0F), doRandom(255.0F), doRandom(255.0F));
+	}
+	
+	private static Texture doCreateTexture(final String name) {
+		try {
+			return Texture.create(RayCaster.class.getResourceAsStream(name));
+		} catch(final Throwable t) {
+			t.printStackTrace();
+			return Texture.create();
+		}
 	}
 	
 	private static void doCrossProduct(final float[] vector0, final int offset0, final float[] vector1, final int offset1, final float[] vector2, final int offset2) {
@@ -1390,9 +1400,13 @@ public final class RayCaster extends Kernel implements KeyListener {
 		
 		////////////////////////////////////////////////////////////////////////////////////////////////////
 		
+		public static Texture create() {
+			return new Texture(1, 1, new int[] {255});
+		}
+		
 		@SuppressWarnings("synthetic-access")
-		public static Texture create(final File file) {
-			final BufferedImage bufferedImage = doCreateBufferedImageFrom(file);
+		public static Texture create(final InputStream inputStream) {
+			final BufferedImage bufferedImage = doCreateBufferedImageFrom(inputStream);
 			
 			final int width = bufferedImage.getWidth();
 			final int height = bufferedImage.getHeight();

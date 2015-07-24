@@ -3,7 +3,7 @@
 <!--The following properties should be specified by each project. Some of them are the same for all projects, whereas others are not.-->
 	<property name="java.source" value="1.8"/>
 	<property name="java.target" value="1.8"/>
-	<property name="project.class.classpath" value=". ./aparapi.jar"/>
+	<property name="project.class.classpath" value=". aparapi.jar"/>
 	<property name="project.class.main" value="org.macroing.gdt.opencl.RayCaster"/>
 	<property name="project.version" value="0.1-beta"/>
 	<property name="root.directory" location="."/>
@@ -183,6 +183,7 @@
 		
 		<copy todir="${distribution.directory}/${project.name}-${project.version}">
 			<fileset dir="${repository.directory}" includes="${project.name}.jar"/>
+			<fileset dir="${repository.directory}" includes="aparapi.jar"/>
 			<fileset dir="${project.resources.distribution.directory}"/>
 			<fileset dir="." includes="COPYING"/>
 			<fileset dir="." includes="COPYING.LESSER"/>
