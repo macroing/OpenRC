@@ -26,7 +26,7 @@ Supported Controls
 * Press 'T' to toggle between the GPU- and JTP* execution modes.
 * Press 'W' to move forward.
 
-**Note** When running with the execution mode JTP*, you may have to press more than once, as it may be very unresponsive because everything is running in the CPU.
+**Note** When running with the execution mode JTP*, you may have to press more than once, as it may be very unresponsive, because everything is running in the CPU.
 
 \* JTP stands for Java Thread Pool.
 
