@@ -14,6 +14,8 @@ Supported Features
 * Textures such as normal color textures.
 * Texture mapping such as spherical texture mapping.
 
+Note: More supported shapes, lights, textures and texture mapping algorithms may very well be added in the future.
+
 Supported Controls
 ------------------
 * Press 'A' to move left.
