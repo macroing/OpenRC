@@ -43,6 +43,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Consumer;
@@ -71,6 +72,28 @@ import com.amd.aparapi.Range;
  * The values in the {@code float} array {@code rays} consists of Origin X, Origin Y, Origin Z, Direction X, Direction Y and Direction Z, for each ray fired from each pixel.
  * <p>
  * The values in the {@code float} array {@code shapes} consists of Type, Size and {@code float}[Size], for each shape defined.
+ * <p>
+ * The controls currently defined are the following:
+ * <ul>
+ * <li>A - Move left.</li>
+ * <li>D - Move right.</li>
+ * <li>E - Display the current execution mode to standard output.</li>
+ * <li>ESC - Exit the program. You may have to press a few times if you're using the execution mode JTP (Java Thread Pool), as it's pretty unresponsive.</li>
+ * <li>S - Move backward.</li>
+ * <li>T - Toggle between the two execution modes GPU and JTP (Java Thread Pool).</li>
+ * <li>W - Move forward.</li>
+ * </ul>
+ * <p>
+ * The features currently supported are the following:
+ * <ul>
+ * <li>Shapes such as spheres.</li>
+ * <li>Lights such as point lights.</li>
+ * <li>Textures such as normal color textures.</li>
+ * <li>Texture mapping such as spherical texture mapping.</li>
+ * <li>Ray Casting, which corresponds to the primary rays of Ray Tracing. This means no reflections and refractions are shown. At least not yet.</li>
+ * </ul>
+ * <p>
+ * Note that the features above will probably be expanded upon with time.
  * 
  * @since 1.0.0
  * @author J&#246;rgen Lundgren
@@ -101,6 +124,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private static final int RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS = 0;
 	private static final int RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES = 0;
 	private static final int RELATIVE_OFFSET_OF_SHAPE_SIZE_SCALAR_IN_SHAPES = 1;
+	@SuppressWarnings("unused")
 	private static final int RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES = 6;
 	private static final int RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES = 2;
 	private static final int RELATIVE_OFFSET_OF_SPHERE_RADIUS_SCALAR_IN_SHAPES = 5;
@@ -114,6 +138,10 @@ public final class RayCaster extends Kernel implements KeyListener {
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 //	The following variables are only used by the CPU:
+	private final AtomicBoolean isPrintingExecutionMode = new AtomicBoolean();
+	private final AtomicBoolean isRunning = new AtomicBoolean();
+	private final AtomicBoolean isTerminationRequested = new AtomicBoolean();
+	private final AtomicBoolean isTogglingExecutionMode = new AtomicBoolean();
 	private final boolean[] isKeyPressed;
 	private final BufferedImage bufferedImage;
 	private final Camera camera;
@@ -155,7 +183,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		this.lightsLength = this.lights.length;
 		this.range = Range.create(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
 		this.rays = doCreateRays(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
-		this.rGB = toRGB(this.bufferedImage);
+		this.rGB = doToRGB(this.bufferedImage);
 		this.shapes = scene.toShapeArray();
 		this.shapesLength = this.shapes.length;
 		this.texture = texture.getData();
@@ -282,6 +310,9 @@ public final class RayCaster extends Kernel implements KeyListener {
 	 * Called to start the Ray Caster.
 	 */
 	public void start() {
+//		Initialize the field isRunning to true:
+		this.isRunning.set(true);
+		
 //		Add a KeyListener to the JFrame:
 		doInvokeAndWait(() -> this.jFrame.addKeyListener(this));
 		
@@ -295,7 +326,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		put(this.shapes);
 		put(this.rGB);
 		
-		while(true) {
+		while(this.isRunning.get()) {
 //			Update the current frame:
 			doUpdate();
 			
@@ -314,6 +345,12 @@ public final class RayCaster extends Kernel implements KeyListener {
 //			Update the FPS in the FPSCounter:
 			this.fPSCounter.update();
 		}
+		
+//		Tell the Kernel to dispose of any resources used.
+		dispose();
+		
+//		Tell the JFrame to dispose of any resources used.
+		this.jFrame.dispose();
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -331,6 +368,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+	@SuppressWarnings("unused")
 	private float doCalculateShading(final int intersectionOffset, final int shapeOffset) {
 //		Initialize the shading value:
 		float shading = 0.0F;
@@ -530,8 +568,26 @@ public final class RayCaster extends Kernel implements KeyListener {
 			this.camera.move(movement, 0.0F, 0.0F);
 		}
 		
+		if(this.isKeyPressed[KeyEvent.VK_E] && this.isPrintingExecutionMode.compareAndSet(false, true)) {
+			System.out.printf("ExecutionMode: %s%n", getExecutionMode());
+		} else if(!this.isKeyPressed[KeyEvent.VK_E]) {
+			this.isPrintingExecutionMode.compareAndSet(true, false);
+		}
+		
+		if(this.isKeyPressed[KeyEvent.VK_ESCAPE] && this.isTerminationRequested.compareAndSet(false, true)) {
+			this.isRunning.set(false);
+		} else if(!this.isKeyPressed[KeyEvent.VK_ESCAPE]) {
+			this.isTerminationRequested.compareAndSet(true, false);
+		}
+		
 		if(this.isKeyPressed[KeyEvent.VK_S]) {
 			this.camera.move(0.0F, 0.0F, movement);
+		}
+		
+		if(this.isKeyPressed[KeyEvent.VK_T] && this.isTogglingExecutionMode.compareAndSet(false, true)) {
+			setExecutionMode(getExecutionMode() == EXECUTION_MODE.GPU ? EXECUTION_MODE.JTP : EXECUTION_MODE.GPU);
+		} else if(!this.isKeyPressed[KeyEvent.VK_T]) {
+			this.isTogglingExecutionMode.compareAndSet(true, false);
 		}
 		
 		if(this.isKeyPressed[KeyEvent.VK_W]) {
@@ -574,7 +630,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		return data;
 	}
 	
-	private static int[] toRGB(final BufferedImage bufferedImage) {
+	private static int[] doToRGB(final BufferedImage bufferedImage) {
 		final WritableRaster writableRaster = bufferedImage.getRaster();
 		
 		final DataBuffer dataBuffer = writableRaster.getDataBuffer();
@@ -665,10 +721,10 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private static Scene doCreateScene() {
 		final
 		Scene scene = new Scene();
-		scene.addLight(new PointLight(100.0F, 20.0F, 100.0F, 100.0F));
-		scene.addLight(new PointLight(200.0F, 20.0F, 200.0F, 100.0F));
-		scene.addLight(new PointLight(200.0F, 20.0F, 100.0F, 100.0F));
-		scene.addLight(new PointLight(100.0F, 20.0F, 200.0F, 100.0F));
+		scene.addLight(new PointLight(400.0F, 20.0F, 400.0F, 100.0F));
+		scene.addLight(new PointLight(600.0F, 20.0F, 600.0F, 100.0F));
+		scene.addLight(new PointLight(600.0F, 20.0F, 400.0F, 100.0F));
+		scene.addLight(new PointLight(400.0F, 20.0F, 600.0F, 100.0F));
 		
 		for(int i = 0; i < 500; i++) {
 			scene.addShape(doCreateRandomSphere());
@@ -898,7 +954,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		////////////////////////////////////////////////////////////////////////////////////////////////////
 		
 		public Camera() {
-			setEye(0.0F, 0.0F, 100.0F);
+			setEye(500.0F, 0.0F, 500.0F);
 			setUp(0.0F, 1.0F, 0.0F);
 			setLookAt(0.0F, 0.0F, -800.0F);
 			setViewPlaneDistance(800.0F);
@@ -1334,6 +1390,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		
 		////////////////////////////////////////////////////////////////////////////////////////////////////
 		
+		@SuppressWarnings("synthetic-access")
 		public static Texture create(final File file) {
 			final BufferedImage bufferedImage = doCreateBufferedImageFrom(file);
 			
