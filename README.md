@@ -14,7 +14,7 @@ Supported Features
 * Textures such as normal color textures.
 * Texture mapping such as spherical texture mapping.
 
-Note: More supported shapes, lights, textures and texture mapping algorithms may very well be added in the future.
+**Note** More supported shapes, lights, textures and texture mapping algorithms may very well be added in the future.
 
 Supported Controls
 ------------------
@@ -26,7 +26,7 @@ Supported Controls
 * Press 'T' to toggle between the GPU- and JTP* execution modes.
 * Press 'W' to move forward.
 
-Note: When running with the execution mode JTP*, you may have to press more than once, as it is pretty unresponsive.
+**Note** When running with the execution mode JTP*, you may have to press more than once, as it is pretty unresponsive.
 
 \* JTP stands for Java Thread Pool.
 
