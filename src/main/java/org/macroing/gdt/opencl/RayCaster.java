@@ -87,7 +87,7 @@ import com.amd.aparapi.Range;
  * <p>
  * The features currently supported are the following:
  * <ul>
- * <li>Shapes such as spheres.</li>
+ * <li>Shapes such as planes, spheres and triangles.</li>
  * <li>Lights such as point lights.</li>
  * <li>Textures such as normal color textures.</li>
  * <li>Texture mapping such as spherical texture mapping.</li>

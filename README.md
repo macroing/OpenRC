@@ -9,7 +9,7 @@ This program is provided by Macroing.org.
 Supported Features
 ------------------
 * A very simple Ray Caster implementation.
-* Shapes such as spheres.
+* Shapes such as planes, spheres and triangles.
 * Lights such as point lights.
 * Textures such as normal color textures.
 * Texture mapping such as spherical texture mapping.
@@ -40,6 +40,15 @@ ant
 cd distribution/org.macroing.gdt.opencl-0.1-beta
 java -jar org.macroing.gdt.opencl.jar
 ```
+
+TODO
+----
+This list contains some of the features and improvements that are likely to come in the future. The order of the list is not indicative of importance. It's the order I came to think about things to add.
+* Better texture management. Currently only one can be used.
+* Fix the shading algorithm to work on planes and triangles.
+* Fix the shading algorithm to take into account occluding shapes.
+* Add texture mapping to planes and triangles.
+* Add vertex colors to triangles for shading with gradients.
 
 Dependencies
 ------------
