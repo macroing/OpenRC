@@ -106,6 +106,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private static final float TYPE_PLANE = 2.0F;
 	private static final float TYPE_POINT_LIGHT = 1.0F;
 	private static final float TYPE_SPHERE = 1.0F;
+	private static final float TYPE_TRIANGLE = 3.0F;
 	private static final int ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT = 0;
 	private static final int ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR = 6;
 	private static final int ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR = 9;
@@ -131,6 +132,10 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private static final int RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES = 6;
 	private static final int RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES = 2;
 	private static final int RELATIVE_OFFSET_OF_SPHERE_RADIUS_SCALAR_IN_SHAPES = 5;
+	private static final int RELATIVE_OFFSET_OF_TRIANGLE_A_POINT_IN_SHAPES = 2;
+	private static final int RELATIVE_OFFSET_OF_TRIANGLE_B_POINT_IN_SHAPES = 5;
+	private static final int RELATIVE_OFFSET_OF_TRIANGLE_C_POINT_IN_SHAPES = 8;
+	private static final int RELATIVE_OFFSET_OF_TRIANGLE_SURFACE_NORMAL_VECTOR_IN_SHAPES = 11;
 	private static final int SIZE_OF_CAMERA = 3 + 3 + 3 + 3 + 3 + 3 + 1;
 	private static final int SIZE_OF_INTERSECTION_IN_INTERSECTIONS = 1 + 1 + 3 + 3;
 	private static final int SIZE_OF_PIXEL_IN_PIXELS = 1 + 1 + 1;
@@ -138,6 +143,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private static final int SIZE_OF_POINT_LIGHT_IN_LIGHTS = 1 + 1 + 3 + 1;
 	private static final int SIZE_OF_RAY_IN_RAYS = 3 + 3;
 	private static final int SIZE_OF_SPHERE_IN_SHAPES = 1 + 1 + 3 + 1 + 3;
+	private static final int SIZE_OF_TRIANGLE_IN_SHAPES = 1 + 1 + 3 + 3 + 3 + 3;
 	private static final int WIDTH = 1024;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -269,8 +275,8 @@ public final class RayCaster extends Kernel implements KeyListener {
 			final int intersectionOffset = index * SIZE_OF_INTERSECTION_IN_INTERSECTIONS;
 			final int shapeOffset = (int)(this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS]);
 			
-//			Calculate the shading for the intersected shape at the surface intersection point:
-			final float shading = doCalculateShading(intersectionOffset, shapeOffset);
+//			Initialize the shading variable:
+			float shading = 1.0F;
 			
 			if(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES] == TYPE_PLANE) {
 				this.pixels[pixelOffset + 0] = 255.0F;
@@ -279,7 +285,16 @@ public final class RayCaster extends Kernel implements KeyListener {
 			}
 			
 			if(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES] == TYPE_SPHERE) {
+//				Calculate the shading for the intersected sphere at the surface intersection point:
+				shading = doCalculateShading(intersectionOffset, shapeOffset);
+				
 				doPerformSphericalTextureMapping(intersectionOffset, pixelOffset, shapeOffset);
+			}
+			
+			if(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES] == TYPE_TRIANGLE) {
+				this.pixels[pixelOffset + 0] = 255.0F;
+				this.pixels[pixelOffset + 1] = 255.0F;
+				this.pixels[pixelOffset + 2] = 255.0F;
 			}
 			
 //			Update the RGB-values of the current pixel, given the RGB-values of the intersected shape:
@@ -446,6 +461,10 @@ public final class RayCaster extends Kernel implements KeyListener {
 				shapeDistance = doGetIntersectionForSphere(rayOriginX, rayOriginY, rayOriginZ, rayDirectionX, rayDirectionY, rayDirectionZ, i);
 			}
 			
+			if(shapeType == TYPE_TRIANGLE) {
+				shapeDistance = doGetIntersectionForTriangle(rayOriginX, rayOriginY, rayOriginZ, rayDirectionX, rayDirectionY, rayDirectionZ, i);
+			}
+			
 			if(shapeDistance > 0.0F && shapeDistance < shapeClosestDistance) {
 //				Update the distance to and the offset of the closest shape:
 				shapeClosestDistance = shapeDistance;
@@ -559,6 +578,60 @@ public final class RayCaster extends Kernel implements KeyListener {
 				if(shapeDistance <= EPSILON) {
 //					We're too close to the shape, so we practically do not see it:
 					shapeDistance = 0.0F;
+				}
+			}
+		}
+		
+		return shapeDistance;
+	}
+	
+	private float doGetIntersectionForTriangle(final float rayOriginX, final float rayOriginY, final float rayOriginZ, final float rayDirectionX, final float rayDirectionY, final float rayDirectionZ, final int shapeOffset) {
+		float shapeDistance = 0.0F;
+		
+		final float triangleAX = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_TRIANGLE_A_POINT_IN_SHAPES + 0];
+		final float triangleAY = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_TRIANGLE_A_POINT_IN_SHAPES + 1];
+		final float triangleAZ = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_TRIANGLE_A_POINT_IN_SHAPES + 2];
+		
+		final float triangleBX = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_TRIANGLE_B_POINT_IN_SHAPES + 0];
+		final float triangleBY = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_TRIANGLE_B_POINT_IN_SHAPES + 1];
+		final float triangleBZ = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_TRIANGLE_B_POINT_IN_SHAPES + 2];
+		
+		final float triangleCX = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_TRIANGLE_C_POINT_IN_SHAPES + 0];
+		final float triangleCY = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_TRIANGLE_C_POINT_IN_SHAPES + 1];
+		final float triangleCZ = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_TRIANGLE_C_POINT_IN_SHAPES + 2];
+		
+		final float edge0X = triangleBX - triangleAX;
+		final float edge0Y = triangleBY - triangleAY;
+		final float edge0Z = triangleBZ - triangleAZ;
+		
+		final float edge1X = triangleCX - triangleAX;
+		final float edge1Y = triangleCY - triangleAY;
+		final float edge1Z = triangleCZ - triangleAZ;
+		
+		final float pX = rayDirectionY * edge1Z - rayDirectionZ * edge1Y;
+		final float pY = rayDirectionZ * edge1X - rayDirectionX * edge1Z;
+		final float pZ = rayDirectionX * edge1Y - rayDirectionY * edge1X;
+		
+		final float determinant = edge0X * pX + edge0Y * pY + edge0Z * pZ;
+		
+		if(determinant != 0.0F) {
+			final float determinantReciprocal = 1.0F / determinant;
+			
+			final float vX = rayOriginX - triangleAX;
+			final float vY = rayOriginY - triangleAY;
+			final float vZ = rayOriginZ - triangleAZ;
+			
+			final float u = (vX * pX + vY * pY + vZ * pZ) * determinantReciprocal;
+			
+			if(u >= 0.0F && u <= 1.0F) {
+				final float qX = vY * edge0Z - vZ * edge0Y;
+				final float qY = vZ * edge0X - vX * edge0Z;
+				final float qZ = vX * edge0Y - vY * edge0X;
+				
+				final float v = (rayDirectionX * qX + rayDirectionY * qY + rayDirectionZ * qZ) * determinantReciprocal;
+				
+				if(v >= 0.0F && u + v <= 1.0F) {
+					shapeDistance = (edge1X * qX + edge1Y * qY + edge1Z * qZ) * determinantReciprocal;
 				}
 			}
 		}
@@ -798,6 +871,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		}
 		
 //		scene.addShape(new Plane(1.0F, 0.0F, 0.0F));
+		scene.addShape(new Triangle(2500.0F, 40.0F, 2500.0F, 1000.0F, 40.0F, 1500.0F, -1000.0F, 40.0F, -1000.0F));
 		
 		return scene;
 	}
@@ -1520,6 +1594,111 @@ public final class RayCaster extends Kernel implements KeyListener {
 			final int[] data = doGetDataFrom(bufferedImage);
 			
 			return new Texture(width, height, data);
+		}
+	}
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	private static final class Triangle implements Shape {
+		private final float aX;
+		private final float aY;
+		private final float aZ;
+		private final float bX;
+		private final float bY;
+		private final float bZ;
+		private final float cX;
+		private final float cY;
+		private final float cZ;
+		private final float surfaceNormalX;
+		private final float surfaceNormalY;
+		private final float surfaceNormalZ;
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		public Triangle(final float aX, final float aY, final float aZ, final float bX, final float bY, final float bZ, final float cX, final float cY, final float cZ) {
+			final float[] surfaceNormal = doToSurfaceNormal(aX, aY, aZ, bX, bY, bZ, cX, cY, cZ);
+			
+			this.aX = aX;
+			this.aY = aY;
+			this.aZ = aZ;
+			this.bX = bX;
+			this.bY = bY;
+			this.bZ = bZ;
+			this.cX = cX;
+			this.cY = cY;
+			this.cZ = cZ;
+			this.surfaceNormalX = surfaceNormal[0];
+			this.surfaceNormalY = surfaceNormal[1];
+			this.surfaceNormalZ = surfaceNormal[2];
+		}
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		@Override
+		public float getType() {
+			return TYPE_TRIANGLE;
+		}
+		
+		@Override
+		public float[] toFloatArray() {
+			return new float[] {
+				getType(),
+				size(),
+				this.aX,
+				this.aY,
+				this.aZ,
+				this.bX,
+				this.bY,
+				this.bZ,
+				this.cX,
+				this.cY,
+				this.cZ,
+				this.surfaceNormalX,
+				this.surfaceNormalY,
+				this.surfaceNormalZ
+			};
+		}
+		
+		@Override
+		public int size() {
+			return SIZE_OF_TRIANGLE_IN_SHAPES;
+		}
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		private static float[] doToSurfaceNormal(final float aX, final float aY, final float aZ, final float bX, final float bY, final float bZ, final float cX, final float cY, final float cZ) {
+//			Subtract vector a from vector b:
+			final float x0 = bX - aX;
+			final float y0 = bY - aY;
+			final float z0 = bZ - aZ;
+			
+//			Subtract vector a from vector c:
+			final float x1 = cX - aX;
+			final float y1 = cY - aY;
+			final float z1 = cZ - aZ;
+			
+//			Perform the cross product on the two subtracted vectors:
+			final float x2 = y0 * z1 - z0 * y1;
+			final float y2 = z0 * x1 - x0 * z1;
+			final float z2 = x0 * y1 - y0 * x1;
+			
+//			Get the length of the cross product vector:
+			final float length = (float)(Math.sqrt(x2 * x2 + y2 * y2 + z2 * z2));
+			
+//			Initialize the surface normal array to return:
+			final float[] surfaceNormal = new float[] {x2, y2, z2};
+			
+			if(length > 0.0F) {
+//				Get the reciprocal of the length, such that we can multiply rather than divide:
+				final float lengthReciprocal = 1.0F / length;
+				
+//				Multiply the cross product vector with the reciprocal of the length of the cross product vector itself (normalize):
+				surfaceNormal[0] *= lengthReciprocal;
+				surfaceNormal[1] *= lengthReciprocal;
+				surfaceNormal[2] *= lengthReciprocal;
+			}
+			
+			return surfaceNormal;
 		}
 	}
 }
