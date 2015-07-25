@@ -103,6 +103,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private static final float EPSILON = 1.e-4F;
 	private static final float MAXIMUM_DISTANCE = Float.MAX_VALUE;
 	private static final float PI = (float)(Math.PI);
+	private static final float TYPE_PLANE = 2.0F;
 	private static final float TYPE_POINT_LIGHT = 1.0F;
 	private static final float TYPE_SPHERE = 1.0F;
 	private static final int ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT = 0;
@@ -119,6 +120,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private static final int RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS = 5;
 	private static final int RELATIVE_OFFSET_OF_LIGHT_TYPE_SCALAR_IN_LIGHTS = 0;
 	private static final int RELATIVE_OFFSET_OF_LIGHT_SIZE_SCALAR_IN_LIGHTS = 1;
+	private static final int RELATIVE_OFFSET_OF_PLANE_SURFACE_NORMAL_VECTOR_IN_SHAPES = 2;
 	private static final int RELATIVE_OFFSET_OF_POINT_LIGHT_DISTANCE_FALLOFF_SCALAR_IN_LIGHTS = 5;
 	private static final int RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION_POINT_IN_LIGHTS = 2;
 	private static final int RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS = 3;
@@ -131,6 +133,8 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private static final int RELATIVE_OFFSET_OF_SPHERE_RADIUS_SCALAR_IN_SHAPES = 5;
 	private static final int SIZE_OF_CAMERA = 3 + 3 + 3 + 3 + 3 + 3 + 1;
 	private static final int SIZE_OF_INTERSECTION_IN_INTERSECTIONS = 1 + 1 + 3 + 3;
+	private static final int SIZE_OF_PIXEL_IN_PIXELS = 1 + 1 + 1;
+	private static final int SIZE_OF_PLANE_IN_SHAPES = 1 + 1 + 3;
 	private static final int SIZE_OF_POINT_LIGHT_IN_LIGHTS = 1 + 1 + 3 + 1;
 	private static final int SIZE_OF_RAY_IN_RAYS = 3 + 3;
 	private static final int SIZE_OF_SPHERE_IN_SHAPES = 1 + 1 + 3 + 1 + 3;
@@ -154,6 +158,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private final float[] cameraValues;
 	private final float[] intersections;
 	private final float[] lights;
+	private final float[] pixels;
 	private final float[] rays;
 	private final float[] shapes;
 	private final int height;
@@ -182,6 +187,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		this.jFrame = doCreateJFrame(this.bufferedImage, this.camera, this.fPSCounter);
 		this.lights = scene.toLightArray();
 		this.lightsLength = this.lights.length;
+		this.pixels = doCreatePixels(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
 		this.range = Range.create(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
 		this.rays = doCreateRays(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
 		this.rGB = doToRGB(this.bufferedImage);
@@ -232,6 +238,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 	public void run() {
 //		Initialize index and offset values:
 		final int index = getGlobalId();
+		final int pixelOffset = index * SIZE_OF_PIXEL_IN_PIXELS;
 		final int rayOffset = index * SIZE_OF_RAY_IN_RAYS;
 		
 //		Initialize the U- and V-coordinates:
@@ -253,9 +260,9 @@ public final class RayCaster extends Kernel implements KeyListener {
 		final float distance = doGetIntersection();
 		
 //		Initialize the RGB-values of the current pixel to black:
-		float r = 0.0F;
-		float g = 0.0F;
-		float b = 0.0F;
+		int r = 0;
+		int g = 0;
+		int b = 0;
 		
 		if(distance > 0.0F && distance < MAXIMUM_DISTANCE) {
 //			Initialize needed offset values:
@@ -265,46 +272,24 @@ public final class RayCaster extends Kernel implements KeyListener {
 //			Calculate the shading for the intersected shape at the surface intersection point:
 			final float shading = doCalculateShading(intersectionOffset, shapeOffset);
 			
+			if(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES] == TYPE_PLANE) {
+				this.pixels[pixelOffset + 0] = 255.0F;
+				this.pixels[pixelOffset + 1] = 255.0F;
+				this.pixels[pixelOffset + 2] = 255.0F;
+			}
+			
 			if(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES] == TYPE_SPHERE) {
-				final float sphereX = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 0];
-				final float sphereY = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 1];
-				final float sphereZ = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 2];
-				
-				final float surfaceIntersectionX = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0];
-				final float surfaceIntersectionY = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1];
-				final float surfaceIntersectionZ = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2];
-				
-				final float dx = sphereX - surfaceIntersectionX;
-				final float dy = sphereY - surfaceIntersectionY;
-				final float dz = sphereZ - surfaceIntersectionZ;
-				
-				final float lengthReciprocal = 1.0F / sqrt(dx * dx + dy * dy + dz * dz);
-				
-				final float distanceX = dx * lengthReciprocal;
-				final float distanceY = dy * lengthReciprocal;
-				final float distanceZ = dz * lengthReciprocal;
-				
-				final float textureU = 0.5F + atan2(distanceX, distanceZ) / (2.0F * PI);
-				final float textureV = 0.5F + asin(distanceY) / PI;
-				
-				final int textureX = (int)(this.textureWidth * ((textureU + 1.0F) * 0.5F));
-				final int textureY = (int)(this.textureHeight * ((textureV + 1.0F) * 0.5F));
-				final int textureIndex = textureY * this.textureWidth + textureX;
-				final int textureRGB = this.texture[textureIndex];
-				
-				r = doToR(textureRGB);
-				g = doToG(textureRGB);
-				b = doToB(textureRGB);
+				doPerformSphericalTextureMapping(intersectionOffset, pixelOffset, shapeOffset);
 			}
 			
 //			Update the RGB-values of the current pixel, given the RGB-values of the intersected shape:
-			r = (r /*+ this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 0]*/) * shading;
-			g = (g /*+ this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 1]*/) * shading;
-			b = (b /*+ this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES + 2]*/) * shading;
+			r = (int)(this.pixels[pixelOffset + 0] * shading);
+			g = (int)(this.pixels[pixelOffset + 1] * shading);
+			b = (int)(this.pixels[pixelOffset + 2] * shading);
 		}
 		
 //		Set the RGB-value of the current pixel:
-		this.rGB[index] = doToRGB((int)(r), (int)(g), (int)(b));
+		this.rGB[index] = doToRGB(r, g, b);
 	}
 	
 	/**
@@ -453,41 +438,12 @@ public final class RayCaster extends Kernel implements KeyListener {
 //			Initialize the shape distance to the maximum value:
 			float shapeDistance = MAXIMUM_DISTANCE;
 			
+			if(shapeType == TYPE_PLANE) {
+				shapeDistance = doGetIntersectionForPlane(rayOriginX, rayOriginY, rayOriginZ, rayDirectionX, rayDirectionY, rayDirectionZ, i);
+			}
+			
 			if(shapeType == TYPE_SPHERE) {
-//				Initialize the temporary X-, Y-, Z- and radius variables of the current sphere:
-				final float sphereX = this.shapes[i + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 0];
-				final float sphereY = this.shapes[i + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 1];
-				final float sphereZ = this.shapes[i + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 2];
-				final float sphereRadius = this.shapes[i + RELATIVE_OFFSET_OF_SPHERE_RADIUS_SCALAR_IN_SHAPES];
-				
-//				Calculate the delta values between the current sphere and the origin of the camera:
-				final float dx = sphereX - rayOriginX;
-				final float dy = sphereY - rayOriginY;
-				final float dz = sphereZ - rayOriginZ;
-				
-//				Calculate the dot product:
-				final float b = dx * rayDirectionX + dy * rayDirectionY + dz * rayDirectionZ;
-				
-//				Calculate the discriminant:
-				float discriminant = b * b - (dx * dx + dy * dy + dz * dz) + sphereRadius * sphereRadius;
-				
-				if(discriminant >= 0.0F) {
-//					Recalculate the discriminant:
-					discriminant = sqrt(discriminant);
-					
-//					Calculate the distance:
-					shapeDistance = b - discriminant;
-					
-					if(shapeDistance <= EPSILON) {
-//						Recalculate the distance:
-						shapeDistance = b + discriminant;
-						
-						if(shapeDistance <= EPSILON) {
-//							We're too close to the shape, so we practically do not see it:
-							shapeDistance = 0.0F;
-						}
-					}
-				}
+				shapeDistance = doGetIntersectionForSphere(rayOriginX, rayOriginY, rayOriginZ, rayDirectionX, rayDirectionY, rayDirectionZ, i);
 			}
 			
 			if(shapeDistance > 0.0F && shapeDistance < shapeClosestDistance) {
@@ -544,6 +500,72 @@ public final class RayCaster extends Kernel implements KeyListener {
 		return shapeClosestDistance;
 	}
 	
+	private float doGetIntersectionForPlane(final float rayOriginX, final float rayOriginY, final float rayOriginZ, final float rayDirectionX, final float rayDirectionY, final float rayDirectionZ, final int shapeOffset) {
+//		Initialize a variable with the plane constant:
+		final float planeConstant = -2.0F;
+		
+//		Initialize the temporary X-, Y- and Z- variables of the current plane:
+		final float planeSurfaceNormalX = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_PLANE_SURFACE_NORMAL_VECTOR_IN_SHAPES + 0];
+		final float planeSurfaceNormalY = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_PLANE_SURFACE_NORMAL_VECTOR_IN_SHAPES + 1];
+		final float planeSurfaceNormalZ = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_PLANE_SURFACE_NORMAL_VECTOR_IN_SHAPES + 2];
+		
+//		Calculate the dot product and its absolute version:
+		final float dotProduct = rayDirectionX * planeSurfaceNormalX + rayDirectionY * planeSurfaceNormalY + rayDirectionZ * planeSurfaceNormalZ;
+		final float dotProductAbsolute = abs(dotProduct);
+		
+//		Initialize the shape distance variable:
+		float shapeDistance = 0.0F;
+		
+		if(dotProductAbsolute >= EPSILON) {
+//			Calculate the distance:
+			shapeDistance = (planeConstant - (rayOriginX * planeSurfaceNormalX + rayOriginY * planeSurfaceNormalY + rayOriginZ * planeSurfaceNormalZ)) / dotProduct;
+		}
+		
+		return shapeDistance;
+	}
+	
+	private float doGetIntersectionForSphere(final float rayOriginX, final float rayOriginY, final float rayOriginZ, final float rayDirectionX, final float rayDirectionY, final float rayDirectionZ, final int shapeOffset) {
+//		Initialize the temporary X-, Y-, Z- and radius variables of the current sphere:
+		final float sphereX = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 0];
+		final float sphereY = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 1];
+		final float sphereZ = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 2];
+		final float sphereRadius = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_RADIUS_SCALAR_IN_SHAPES];
+		
+//		Calculate the delta values between the current sphere and the origin of the camera:
+		final float dx = sphereX - rayOriginX;
+		final float dy = sphereY - rayOriginY;
+		final float dz = sphereZ - rayOriginZ;
+		
+//		Calculate the dot product:
+		final float b = dx * rayDirectionX + dy * rayDirectionY + dz * rayDirectionZ;
+		
+//		Calculate the discriminant:
+		float discriminant = b * b - (dx * dx + dy * dy + dz * dz) + sphereRadius * sphereRadius;
+		
+//		Initialize the shape distance variable:
+		float shapeDistance = 0.0F;
+		
+		if(discriminant >= 0.0F) {
+//			Recalculate the discriminant:
+			discriminant = sqrt(discriminant);
+			
+//			Calculate the distance:
+			shapeDistance = b - discriminant;
+			
+			if(shapeDistance <= EPSILON) {
+//				Recalculate the distance:
+				shapeDistance = b + discriminant;
+				
+				if(shapeDistance <= EPSILON) {
+//					We're too close to the shape, so we practically do not see it:
+					shapeDistance = 0.0F;
+				}
+			}
+		}
+		
+		return shapeDistance;
+	}
+	
 	private float doLength(final float[] vector, final int offset) {
 		return sqrt(doLengthSquared(vector, offset));
 	}
@@ -554,6 +576,38 @@ public final class RayCaster extends Kernel implements KeyListener {
 		vector[offset + 0] *= lengthReciprocal;
 		vector[offset + 1] *= lengthReciprocal;
 		vector[offset + 2] *= lengthReciprocal;
+	}
+	
+	private void doPerformSphericalTextureMapping(final int intersectionOffset, final int pixelOffset, final int shapeOffset) {
+		final float sphereX = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 0];
+		final float sphereY = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 1];
+		final float sphereZ = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 2];
+		
+		final float surfaceIntersectionX = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0];
+		final float surfaceIntersectionY = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1];
+		final float surfaceIntersectionZ = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2];
+		
+		final float dx = sphereX - surfaceIntersectionX;
+		final float dy = sphereY - surfaceIntersectionY;
+		final float dz = sphereZ - surfaceIntersectionZ;
+		
+		final float lengthReciprocal = 1.0F / sqrt(dx * dx + dy * dy + dz * dz);
+		
+		final float distanceX = dx * lengthReciprocal;
+		final float distanceY = dy * lengthReciprocal;
+		final float distanceZ = dz * lengthReciprocal;
+		
+		final float textureU = 0.5F + atan2(distanceX, distanceZ) / (2.0F * PI);
+		final float textureV = 0.5F + asin(distanceY) / PI;
+		
+		final int textureX = (int)(this.textureWidth * ((textureU + 1.0F) * 0.5F));
+		final int textureY = (int)(this.textureHeight * ((textureV + 1.0F) * 0.5F));
+		final int textureIndex = textureY * this.textureWidth + textureX;
+		final int textureRGB = this.texture[textureIndex];
+		
+		this.pixels[pixelOffset + 0] = doToR(textureRGB);
+		this.pixels[pixelOffset + 1] = doToG(textureRGB);
+		this.pixels[pixelOffset + 2] = doToB(textureRGB);
 	}
 	
 	private void doUpdate() {
@@ -619,30 +673,6 @@ public final class RayCaster extends Kernel implements KeyListener {
 		}
 	}
 	
-	private static int[] doGetDataFrom(final BufferedImage bufferedImage) {
-		final WritableRaster writableRaster = bufferedImage.getRaster();
-		
-		final DataBuffer dataBuffer = writableRaster.getDataBuffer();
-		
-		final DataBufferInt dataBufferInt = DataBufferInt.class.cast(dataBuffer);
-		
-		final int[] data = dataBufferInt.getData();
-		
-		return data;
-	}
-	
-	private static int[] doToRGB(final BufferedImage bufferedImage) {
-		final WritableRaster writableRaster = bufferedImage.getRaster();
-		
-		final DataBuffer dataBuffer = writableRaster.getDataBuffer();
-		
-		final DataBufferInt dataBufferInt = DataBufferInt.class.cast(dataBuffer);
-		
-		final int[] rGB = dataBufferInt.getData();
-		
-		return rGB;
-	}
-	
 	private static float doDotProduct(final float[] vector0, final int offset0, final float[] vector1, final int offset1) {
 		return vector0[offset0] * vector1[offset1] + vector0[offset0 + 1] * vector1[offset1 + 1] + vector0[offset0 + 2] * vector1[offset1 + 2];
 	}
@@ -672,6 +702,18 @@ public final class RayCaster extends Kernel implements KeyListener {
 		return intersections;
 	}
 	
+	private static float[] doCreatePixels(final int length) {
+		final float[] pixels = new float[length * SIZE_OF_PIXEL_IN_PIXELS];
+		
+		for(int i = 0; i < pixels.length; i += SIZE_OF_PIXEL_IN_PIXELS) {
+			pixels[i + 0] = 0.0F;
+			pixels[i + 1] = 0.0F;
+			pixels[i + 2] = 0.0F;
+		}
+		
+		return pixels;
+	}
+	
 	private static float[] doCreateRays(final int length) {
 		return new float[length * SIZE_OF_RAY_IN_RAYS];
 	}
@@ -690,6 +732,30 @@ public final class RayCaster extends Kernel implements KeyListener {
 	
 	private static int doToRGB(final int r, final int g, final int b) {
 		return ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | ((b & 0xFF) << 0);
+	}
+	
+	private static int[] doGetDataFrom(final BufferedImage bufferedImage) {
+		final WritableRaster writableRaster = bufferedImage.getRaster();
+		
+		final DataBuffer dataBuffer = writableRaster.getDataBuffer();
+		
+		final DataBufferInt dataBufferInt = DataBufferInt.class.cast(dataBuffer);
+		
+		final int[] data = dataBufferInt.getData();
+		
+		return data;
+	}
+	
+	private static int[] doToRGB(final BufferedImage bufferedImage) {
+		final WritableRaster writableRaster = bufferedImage.getRaster();
+		
+		final DataBuffer dataBuffer = writableRaster.getDataBuffer();
+		
+		final DataBufferInt dataBufferInt = DataBufferInt.class.cast(dataBuffer);
+		
+		final int[] rGB = dataBufferInt.getData();
+		
+		return rGB;
 	}
 	
 	private static JFrame doCreateJFrame(final BufferedImage bufferedImage, final Camera camera, final FPSCounter fPSCounter) {
@@ -731,6 +797,8 @@ public final class RayCaster extends Kernel implements KeyListener {
 			scene.addShape(doCreateRandomSphere());
 		}
 		
+//		scene.addShape(new Plane(1.0F, 0.0F, 0.0F));
+		
 		return scene;
 	}
 	
@@ -741,8 +809,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private static Texture doCreateTexture(final String name) {
 		try {
 			return Texture.create(RayCaster.class.getResourceAsStream(name));
-		} catch(final Throwable t) {
-			t.printStackTrace();
+		} catch(final Exception e) {
 			return Texture.create();
 		}
 	}
@@ -1199,6 +1266,45 @@ public final class RayCaster extends Kernel implements KeyListener {
 		float[] toFloatArray();
 		
 		int size();
+	}
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	private static final class Plane implements Shape {
+		private final float surfaceNormalX;
+		private final float surfaceNormalY;
+		private final float surfaceNormalZ;
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		public Plane(final float surfaceNormalX, final float surfaceNormalY, final float surfaceNormalZ) {
+			this.surfaceNormalX = surfaceNormalX;
+			this.surfaceNormalY = surfaceNormalY;
+			this.surfaceNormalZ = surfaceNormalZ;
+		}
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
+		
+		@Override
+		public float getType() {
+			return TYPE_PLANE;
+		}
+		
+		@Override
+		public float[] toFloatArray() {
+			return new float[] {
+				getType(),
+				size(),
+				this.surfaceNormalX,
+				this.surfaceNormalY,
+				this.surfaceNormalZ
+			};
+		}
+		
+		@Override
+		public int size() {
+			return SIZE_OF_PLANE_IN_SHAPES;
+		}
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////

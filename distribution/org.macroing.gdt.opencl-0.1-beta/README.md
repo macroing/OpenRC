@@ -8,7 +8,38 @@ This program is provided by Macroing.org.
 
 Supported Features
 ------------------
-* A very simple Ray Caster, that allows you to walk around in a very simple world, using your WASD-keys.
+* A very simple Ray Caster implementation.
+* Shapes such as spheres.
+* Lights such as point lights.
+* Textures such as normal color textures.
+* Texture mapping such as spherical texture mapping.
+
+**Note** More supported shapes, lights, textures and texture mapping algorithms may very well be added in the future.
+
+Supported Controls
+------------------
+* Press 'A' to move left.
+* Press 'D' to move right.
+* Press 'E' to display the current execution mode (GPU or JTP*).
+* Press 'ESC' to exit.
+* Press 'S' to move backward.
+* Press 'T' to toggle between the GPU- and JTP* execution modes.
+* Press 'W' to move forward.
+
+**Note** When running with the execution mode JTP*, you may have to press more than once, as it may be very unresponsive, because everything is running in the CPU.
+
+\* JTP stands for Java Thread Pool.
+
+Getting Started
+---------------
+To clone this repository, build the project and run it, you can type the following in Git Bash. You need Apache Ant though.
+```bash
+git clone https://github.com/macroing/GDT-OpenCL.git
+cd GDT-OpenCL
+ant
+cd distribution/org.macroing.gdt.opencl-0.1-beta
+java -jar org.macroing.gdt.opencl.jar
+```
 
 Dependencies
 ------------
