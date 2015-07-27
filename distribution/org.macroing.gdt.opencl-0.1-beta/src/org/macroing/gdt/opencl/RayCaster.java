@@ -87,7 +87,7 @@ import com.amd.aparapi.Range;
  * <p>
  * The features currently supported are the following:
  * <ul>
- * <li>Shapes such as spheres.</li>
+ * <li>Shapes such as planes, spheres and triangles.</li>
  * <li>Lights such as point lights.</li>
  * <li>Textures such as normal color textures.</li>
  * <li>Texture mapping such as spherical texture mapping.</li>
@@ -275,8 +275,8 @@ public final class RayCaster extends Kernel implements KeyListener {
 			final int intersectionOffset = index * SIZE_OF_INTERSECTION_IN_INTERSECTIONS;
 			final int shapeOffset = (int)(this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS]);
 			
-//			Initialize the shading variable:
-			float shading = 1.0F;
+//			Calculate the shading for the intersected shape at the surface intersection point:
+			final float shading = doCalculateShading(intersectionOffset, shapeOffset);
 			
 			if(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES] == TYPE_PLANE) {
 				this.pixels[pixelOffset + 0] = 255.0F;
@@ -285,9 +285,6 @@ public final class RayCaster extends Kernel implements KeyListener {
 			}
 			
 			if(this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES] == TYPE_SPHERE) {
-//				Calculate the shading for the intersected sphere at the surface intersection point:
-				shading = doCalculateShading(intersectionOffset, shapeOffset);
-				
 				doPerformSphericalTextureMapping(intersectionOffset, pixelOffset, shapeOffset);
 			}
 			
@@ -480,39 +477,16 @@ public final class RayCaster extends Kernel implements KeyListener {
 			this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1] = rayOriginY + rayDirectionY * shapeClosestDistance;
 			this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2] = rayOriginZ + rayDirectionZ * shapeClosestDistance;
 			
+			if(this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES] == TYPE_PLANE) {
+				doUpdateSurfaceNormalForPlane(intersectionOffset, shapeClosestOffset);
+			}
+			
 			if(this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES] == TYPE_SPHERE) {
-//				Initialize variables with the position of the sphere:
-				final float sphereX = this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 0];
-				final float sphereY = this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 1];
-				final float sphereZ = this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 2];
-				
-//				Initialize variables with the delta values between the surface intersection point and the center of the sphere:
-				final float dx = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0] - sphereX;
-				final float dy = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1] - sphereY;
-				final float dz = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2] - sphereZ;
-				
-//				Calculate the length of the delta vector:
-				final float length = sqrt(dx * dx + dy * dy + dz * dz);
-				
-//				Initialize variables with the surface normal vector:
-				float surfaceNormalX = 0.0F;
-				float surfaceNormalY = 0.0F;
-				float surfaceNormalZ = 0.0F;
-				
-				if(length > 0.0F) {
-//					//Calculate the length reciprocal:
-					final float lengthReciprocal = 1.0F / length;
-					
-//					Set the surface normal vector to the delta vector multiplied with the length reciprocal:
-					surfaceNormalX = dx * lengthReciprocal;
-					surfaceNormalY = dy * lengthReciprocal;
-					surfaceNormalZ = dz * lengthReciprocal;
-				}
-				
-//				Update the intersections array with the surface normal vector:
-				this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0] = surfaceNormalX;
-				this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1] = surfaceNormalY;
-				this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2] = surfaceNormalZ;
+				doUpdateSurfaceNormalForSphere(intersectionOffset, shapeClosestOffset);
+			}
+			
+			if(this.shapes[shapeClosestOffset + RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES] == TYPE_TRIANGLE) {
+				doUpdateSurfaceNormalForTriangle(intersectionOffset, shapeClosestOffset);
 			}
 		}
 		
@@ -723,6 +697,65 @@ public final class RayCaster extends Kernel implements KeyListener {
 		}
 	}
 	
+	private void doUpdateSurfaceNormalForPlane(final int intersectionOffset, final int shapeOffset) {
+//		Initialize variables with the surface normal vector:
+		final float surfaceNormalX = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_PLANE_SURFACE_NORMAL_VECTOR_IN_SHAPES + 0];
+		final float surfaceNormalY = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_PLANE_SURFACE_NORMAL_VECTOR_IN_SHAPES + 1];
+		final float surfaceNormalZ = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_PLANE_SURFACE_NORMAL_VECTOR_IN_SHAPES + 2];
+		
+//		Update the intersections array with the surface normal vector:
+		this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0] = surfaceNormalX;
+		this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1] = surfaceNormalY;
+		this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2] = surfaceNormalZ;
+	}
+	
+	private void doUpdateSurfaceNormalForSphere(final int intersectionOffset, final int shapeOffset) {
+//		Initialize variables with the position of the sphere:
+		final float sphereX = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 0];
+		final float sphereY = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 1];
+		final float sphereZ = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 2];
+		
+//		Initialize variables with the delta values between the surface intersection point and the center of the sphere:
+		final float dx = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0] - sphereX;
+		final float dy = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1] - sphereY;
+		final float dz = this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2] - sphereZ;
+		
+//		Calculate the length of the delta vector:
+		final float length = sqrt(dx * dx + dy * dy + dz * dz);
+		
+//		Initialize variables with the surface normal vector:
+		float surfaceNormalX = 0.0F;
+		float surfaceNormalY = 0.0F;
+		float surfaceNormalZ = 0.0F;
+		
+		if(length > 0.0F) {
+//			//Calculate the length reciprocal:
+			final float lengthReciprocal = 1.0F / length;
+			
+//			Set the surface normal vector to the delta vector multiplied with the length reciprocal:
+			surfaceNormalX = dx * lengthReciprocal;
+			surfaceNormalY = dy * lengthReciprocal;
+			surfaceNormalZ = dz * lengthReciprocal;
+		}
+		
+//		Update the intersections array with the surface normal vector:
+		this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0] = surfaceNormalX;
+		this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1] = surfaceNormalY;
+		this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2] = surfaceNormalZ;
+	}
+	
+	private void doUpdateSurfaceNormalForTriangle(final int intersectionOffset, final int shapeOffset) {
+//		Initialize variables with the surface normal vector:
+		final float surfaceNormalX = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_TRIANGLE_SURFACE_NORMAL_VECTOR_IN_SHAPES + 0];
+		final float surfaceNormalY = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_TRIANGLE_SURFACE_NORMAL_VECTOR_IN_SHAPES + 1];
+		final float surfaceNormalZ = this.shapes[shapeOffset + RELATIVE_OFFSET_OF_TRIANGLE_SURFACE_NORMAL_VECTOR_IN_SHAPES + 2];
+		
+//		Update the intersections array with the surface normal vector:
+		this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0] = surfaceNormalX;
+		this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1] = surfaceNormalY;
+		this.intersections[intersectionOffset + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2] = surfaceNormalZ;
+	}
+	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	private static BufferedImage doCreateBufferedImageFrom(final InputStream inputStream) {
@@ -870,7 +903,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 			scene.addShape(doCreateRandomSphere());
 		}
 		
-//		scene.addShape(new Plane(1.0F, 0.0F, 0.0F));
+		scene.addShape(new Plane(1.0F, 0.0F, 0.0F));
 		scene.addShape(new Triangle(2500.0F, 40.0F, 2500.0F, 1000.0F, 40.0F, 1500.0F, -1000.0F, 40.0F, -1000.0F));
 		
 		return scene;
