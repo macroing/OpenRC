@@ -52,7 +52,7 @@ This list contains some of the features and improvements that are likely to come
 * Add view frustum culling. It has been started on.
 * Add scene loading from binary files.
 * Add a scene description language to "compile" to the binary files.
-* Add bounding hierarchy volumes (BHVs) to the scene.
+* Add a bounding volume hierarchy (BVH) to the scene.
 * Add anti-aliasing.
 * Fix the camera, so it works like the camera in FPS-games.
 * Add materials like reflective and refractive. Maybe as BSDFs (BRDF and BTDF).
