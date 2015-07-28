@@ -1,6 +1,6 @@
 GDT OpenCL (v. 0.1-beta)
 ========================
-GDT OpenCL is not a binding for OpenCL. It's a simple program for testing various graphics algorithms using a library called Aparapi, which in turn is a binding for OpenCL.
+GDT OpenCL is not a binding for OpenCL. It's a simple program for testing various graphics algorithms using a library called Aparapi, which in turn is a binding for OpenCL. GDT stands for Game Development Tools.
 
 ![alt text](https://github.com/macroing/GDT-OpenCL/blob/master/images/OpenCL_RayCaster_3.png "Ray Caster")
 
@@ -13,8 +13,9 @@ Supported Features
 * Lights such as point lights.
 * Textures such as normal color textures.
 * Texture mapping such as spherical texture mapping.
+* A simple camera for walking around in the scene.
 
-**Note** More supported shapes, lights, textures and texture mapping algorithms may very well be added in the future.
+**Note** More supported shapes, lights, textures and texture mapping algorithms may very well be added in the future. The simple camera may be updated to support walking- and looking around like in an FPS-game.
 
 Supported Controls
 ------------------
