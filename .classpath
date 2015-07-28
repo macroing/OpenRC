@@ -8,6 +8,6 @@
 			<attribute name="javadoc_location" value="file:/D:/workspace/repository/aparapi/api/"/>
 		</attributes>
 	</classpathentry>
-	<classpathentry kind="lib" path="resources/jar/org/macroing/gdt/opencl"/>
+	<classpathentry kind="lib" path="resources/jar/org/macroing/gdt/openrc"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
