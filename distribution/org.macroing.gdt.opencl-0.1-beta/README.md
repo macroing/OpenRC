@@ -2,7 +2,7 @@ GDT OpenCL (v. 0.1-beta)
 ========================
 GDT OpenCL is not a binding for OpenCL. It's a simple program for testing various graphics algorithms using a library called Aparapi, which in turn is a binding for OpenCL.
 
-![alt text](https://github.com/macroing/GDT-OpenCL/blob/master/images/OpenCL_RayCaster_500_Spheres_with_Shading_and_Texture_Mapping.png "Ray Caster")
+![alt text](https://github.com/macroing/GDT-OpenCL/blob/master/images/OpenCL_RayCaster_3.png "Ray Caster")
 
 This program is provided by Macroing.org.
 
@@ -45,10 +45,16 @@ TODO
 ----
 This list contains some of the features and improvements that are likely to come in the future. The order of the list is not indicative of importance. It's the order I came to think about things to add.
 * Better texture management. Currently only one can be used.
-* Fix the shading algorithm to work on planes and triangles.
 * Fix the shading algorithm to take into account occluding shapes.
 * Add texture mapping to planes and triangles.
 * Add vertex colors to triangles for shading with gradients.
+* Add view frustum culling. It has been started on.
+* Add scene loading from binary files.
+* Add a scene description language to "compile" to the binary files.
+* Add bounding hierarchy volumes (BHVs) to the scene.
+* Add anti-aliasing.
+* Fix the camera, so it works like the camera in FPS-games.
+* Add materials like reflective and refractive. Maybe as BSDFs (BRDF and BTDF).
 
 Dependencies
 ------------

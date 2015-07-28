@@ -48,6 +48,13 @@ This list contains some of the features and improvements that are likely to come
 * Fix the shading algorithm to take into account occluding shapes.
 * Add texture mapping to planes and triangles.
 * Add vertex colors to triangles for shading with gradients.
+* Add view frustum culling. It has been started on.
+* Add scene loading from binary files.
+* Add a scene description language to "compile" to the binary files.
+* Add bounding hierarchy volumes (BHVs) to the scene.
+* Add anti-aliasing.
+* Fix the camera, so it works like the camera in FPS-games.
+* Add materials like reflective and refractive. Maybe as BSDFs (BRDF and BTDF).
 
 Dependencies
 ------------
