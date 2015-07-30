@@ -317,6 +317,9 @@ public final class RayCaster extends Kernel implements KeyListener {
 	 * Called to start the Ray Caster.
 	 */
 	public void start() {
+//		Add a shutdown hook that stops the execution and subsequently disposes of any resources:
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> this.isRunning.set(false)));
+		
 //		Initialize the field isRunning to true:
 		this.isRunning.set(true);
 		
@@ -941,7 +944,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		jFrame.setIgnoreRepaint(true);
 		jFrame.setSize(bufferedImage.getWidth(), bufferedImage.getHeight());
 		jFrame.setLocationRelativeTo(null);
-		jFrame.setTitle("OpenCL Ray Caster");
+		jFrame.setTitle("OpenRC - OpenCL Ray Caster");
 		jFrame.setVisible(true);
 		jFrame.createBufferStrategy(2);
 		jFrame.repaint();
