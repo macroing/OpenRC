@@ -422,10 +422,13 @@ public final class RayCaster extends Kernel implements KeyListener {
 				dy *= lengthReciprocal;
 				dz *= lengthReciprocal;
 				
-//				Calculate the shading as the maximum value of 0.1 and the dot product of the delta vector and the surface normal vector:
-				shading = max(dx * surfaceNormalX + dy * surfaceNormalY + dz * surfaceNormalZ, 0.1F);
+//				Calculate the shading as the maximum value of 0.0 and the dot product of the delta vector and the surface normal vector, then add it to the shading variable:
+				shading += dx * surfaceNormalX + dy * surfaceNormalY + dz * surfaceNormalZ;
 			}
 		}
+		
+//		Update the shading variable to be between 0.1 and 1.0:
+		shading = max(min(shading, 1.0F), 0.1F);
 		
 		return shading;
 	}

@@ -317,11 +317,8 @@ public final class RayCaster extends Kernel implements KeyListener {
 	 * Called to start the Ray Caster.
 	 */
 	public void start() {
-		Runtime.getRuntime().addShutdownHook(new Thread(() -> {
-			System.out.println("Shutting down...");
-			
-			this.isRunning.set(false);
-		}));
+//		Add a shutdown hook that stops the execution and subsequently disposes of any resources:
+		Runtime.getRuntime().addShutdownHook(new Thread(() -> this.isRunning.set(false)));
 		
 //		Initialize the field isRunning to true:
 		this.isRunning.set(true);
@@ -426,9 +423,12 @@ public final class RayCaster extends Kernel implements KeyListener {
 				dz *= lengthReciprocal;
 				
 //				Calculate the shading as the maximum value of 0.1 and the dot product of the delta vector and the surface normal vector:
-				shading = max(dx * surfaceNormalX + dy * surfaceNormalY + dz * surfaceNormalZ, 0.1F);
+				shading += dx * surfaceNormalX + dy * surfaceNormalY + dz * surfaceNormalZ;
 			}
 		}
+		
+//		Update the shading variable to be between 0.1 and 1.0:
+		shading = max(min(shading, 1.0F), 0.0F);
 		
 		return shading;
 	}
