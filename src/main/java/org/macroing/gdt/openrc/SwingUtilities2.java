@@ -32,22 +32,22 @@ final class SwingUtilities2 {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	public static <T> T doRunInEDT(final Supplier<T> supplier) {
-		return doRunInEDT(supplier, object -> {});
+	public static <T> T runInEDT(final Supplier<T> supplier) {
+		return runInEDT(supplier, object -> {});
 	}
 	
-	public static <T> T doRunInEDT(final Supplier<T> supplier, final Consumer<T> consumer) {
-		return doRunInEDT(supplier, consumer, null);
+	public static <T> T runInEDT(final Supplier<T> supplier, final Consumer<T> consumer) {
+		return runInEDT(supplier, consumer, null);
 	}
 	
-	public static <T> T doRunInEDT(final Supplier<T> supplier, final Consumer<T> consumer, final T defaultObject) {
+	public static <T> T runInEDT(final Supplier<T> supplier, final Consumer<T> consumer, final T defaultObject) {
 		final AtomicReference<T> atomicReference = new AtomicReference<>();
 		
 		if(supplier != null) {
 			if(SwingUtilities.isEventDispatchThread()) {
 				atomicReference.set(supplier.get());
 			} else {
-				doInvokeAndWait(() -> atomicReference.set(supplier.get()));
+				invokeAndWait(() -> atomicReference.set(supplier.get()));
 			}
 		}
 		
@@ -62,7 +62,7 @@ final class SwingUtilities2 {
 		return atomicReference.get();
 	}
 	
-	public static void doInvokeAndWait(final Runnable runnable) {
+	public static void invokeAndWait(final Runnable runnable) {
 		if(runnable != null) {
 			try {
 				SwingUtilities.invokeAndWait(runnable);

@@ -119,19 +119,19 @@ public final class RayCaster extends Kernel implements KeyListener {
 		this.cameraValues = this.camera.getArray();
 		this.fPSCounter = new FPSCounter();
 		this.height = this.bufferedImage.getHeight();
-		this.intersections = doCreateIntersections(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
+		this.intersections = Intersection.create(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
 		this.isKeyPressed = new boolean[256];
 		this.jFrame = doCreateJFrame(this.bufferedImage, this.camera, this.fPSCounter);
-		this.lights = scene.toLightArray();
+		this.lights = scene.getLightsAsArray();
 		this.lightsLength = this.lights.length;
 		this.pixels = doCreatePixels(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
 		this.range = Range.create(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
 		this.rays = doCreateRays(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
 		this.rGB = doToRGB(this.bufferedImage);
 		this.scene = scene;
-		this.shapeIndices = scene.createShapeIndices();
+		this.shapeIndices = scene.getShapeIndices();
 		this.shapeIndicesLength = this.shapeIndices.length;
-		this.shapes = scene.toShapeArray();
+		this.shapes = scene.getShapesAsArray();
 		this.texture = texture.getData();
 		this.textureHeight = texture.getHeight();
 		this.textureWidth = texture.getWidth();
@@ -205,8 +205,8 @@ public final class RayCaster extends Kernel implements KeyListener {
 		
 		if(distance > 0.0F && distance < Constants.MAXIMUM_DISTANCE) {
 //			Initialize needed offset values:
-			final int intersectionOffset = index * Constants.SIZE_OF_INTERSECTION_IN_INTERSECTIONS;
-			final int shapeOffset = (int)(this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS]);
+			final int intersectionOffset = index * Intersection.SIZE_OF_INTERSECTION_IN_INTERSECTIONS;
+			final int shapeOffset = (int)(this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS]);
 			
 //			Calculate the shading for the intersected shape at the surface intersection point:
 			final float shading = doCalculateShading(intersectionOffset, shapeOffset);
@@ -251,7 +251,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		this.isRunning.set(true);
 		
 //		Add a KeyListener to the JFrame:
-		SwingUtilities2.doInvokeAndWait(() -> this.jFrame.addKeyListener(this));
+		SwingUtilities2.invokeAndWait(() -> this.jFrame.addKeyListener(this));
 		
 //		Make this Kernel instance explicit, such that we have to take care of all array transfers to and from the GPU:
 		setExplicit(true);
@@ -302,7 +302,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 	 */
 	public static void main(final String[] args) {
 		final
-		RayCaster rayCaster = SwingUtilities2.doRunInEDT(() -> new RayCaster());
+		RayCaster rayCaster = SwingUtilities2.runInEDT(() -> new RayCaster());
 		rayCaster.start();
 	}
 	
@@ -314,12 +314,12 @@ public final class RayCaster extends Kernel implements KeyListener {
 		float shading = 0.0F;
 		
 //		Initialize values from the intersection:
-		final float surfaceIntersectionX = this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0];
-		final float surfaceIntersectionY = this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1];
-		final float surfaceIntersectionZ = this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2];
-		final float surfaceNormalX = this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0];
-		final float surfaceNormalY = this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1];
-		final float surfaceNormalZ = this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2];
+		final float surfaceIntersectionX = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0];
+		final float surfaceIntersectionY = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1];
+		final float surfaceIntersectionZ = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2];
+		final float surfaceNormalX = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0];
+		final float surfaceNormalY = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1];
+		final float surfaceNormalZ = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2];
 		
 		for(int i = 0, j = 0; i < this.lightsLength; i += j) {
 //			Initialize the temporary type and size variables of the current light:
@@ -363,7 +363,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private float doGetIntersection() {
 //		Initialize the index and offset values:
 		final int index = getGlobalId();
-		final int intersectionOffset = index * Constants.SIZE_OF_INTERSECTION_IN_INTERSECTIONS;
+		final int intersectionOffset = index * Intersection.SIZE_OF_INTERSECTION_IN_INTERSECTIONS;
 		final int rayOffset = index * Constants.SIZE_OF_RAY_IN_RAYS;
 		
 //		Initialize offset to closest shape:
@@ -381,8 +381,8 @@ public final class RayCaster extends Kernel implements KeyListener {
 		final float rayDirectionZ = this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS + 2];
 		
 //		Reset the float array intersections, so we can perform a new intersection test:
-		this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS] = -1.0F;
-		this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS] = Constants.MAXIMUM_DISTANCE;
+		this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS] = -1.0F;
+		this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS] = Constants.MAXIMUM_DISTANCE;
 		
 		for(int i = 0, shapeOffset = this.shapeIndices[i]; i < this.shapeIndicesLength && shapeOffset >= 0; i++, shapeOffset = this.shapeIndices[i]) {
 //			Initialize the temporary type and size variables of the current shape:
@@ -416,11 +416,11 @@ public final class RayCaster extends Kernel implements KeyListener {
 		
 		if(shapeClosestOffset > -1) {
 //			Update the intersections array with values found:
-			this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS] = shapeClosestOffset;
-			this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS] = shapeClosestDistance;
-			this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0] = rayOriginX + rayDirectionX * shapeClosestDistance;
-			this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1] = rayOriginY + rayDirectionY * shapeClosestDistance;
-			this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2] = rayOriginZ + rayDirectionZ * shapeClosestDistance;
+			this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS] = shapeClosestOffset;
+			this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS] = shapeClosestDistance;
+			this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0] = rayOriginX + rayDirectionX * shapeClosestDistance;
+			this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1] = rayOriginY + rayDirectionY * shapeClosestDistance;
+			this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2] = rayOriginZ + rayDirectionZ * shapeClosestDistance;
 			
 			if(this.shapes[shapeClosestOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES] == Plane.TYPE_PLANE) {
 //				Update the intersections array with the surface normal of the intersected plane:
@@ -590,7 +590,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private void doPerformFrustumCulling() {
 //		TODO: Implement View Frustum Culling here.
 		
-		final List<Shape> shapes = this.scene.getShapes();
+		final List<Shape> shapes = this.scene.getShapesAsList();
 		
 		for(int i = 0; i < this.shapeIndicesLength; i++) {
 			this.shapeIndices[i] = shapes.get(i).getIndex();
@@ -604,9 +604,9 @@ public final class RayCaster extends Kernel implements KeyListener {
 		final float sphereZ = this.shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 2];
 		
 //		Initialize the variables with the surface intersection point (the X-, Y- and Z-values) of the sphere:
-		final float surfaceIntersectionX = this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0];
-		final float surfaceIntersectionY = this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1];
-		final float surfaceIntersectionZ = this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2];
+		final float surfaceIntersectionX = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0];
+		final float surfaceIntersectionY = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1];
+		final float surfaceIntersectionZ = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2];
 		
 //		Calculate the delta values between the position and the surface intersection point of the sphere:
 		final float dx = sphereX - surfaceIntersectionX;
@@ -689,9 +689,9 @@ public final class RayCaster extends Kernel implements KeyListener {
 		final float surfaceNormalZ = this.shapes[shapeOffset + Plane.RELATIVE_OFFSET_OF_PLANE_SURFACE_NORMAL_VECTOR_IN_SHAPES + 2];
 		
 //		Update the intersections array with the surface normal vector:
-		this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0] = surfaceNormalX;
-		this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1] = surfaceNormalY;
-		this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2] = surfaceNormalZ;
+		this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0] = surfaceNormalX;
+		this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1] = surfaceNormalY;
+		this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2] = surfaceNormalZ;
 	}
 	
 	private void doUpdateSurfaceNormalForSphere(final int intersectionOffset, final int shapeOffset) {
@@ -701,9 +701,9 @@ public final class RayCaster extends Kernel implements KeyListener {
 		final float sphereZ = this.shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 2];
 		
 //		Initialize variables with the delta values between the surface intersection point and the center of the sphere:
-		final float dx = this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0] - sphereX;
-		final float dy = this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1] - sphereY;
-		final float dz = this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2] - sphereZ;
+		final float dx = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0] - sphereX;
+		final float dy = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1] - sphereY;
+		final float dz = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2] - sphereZ;
 		
 //		Calculate the length of the delta vector:
 		final float length = sqrt(dx * dx + dy * dy + dz * dz);
@@ -724,9 +724,9 @@ public final class RayCaster extends Kernel implements KeyListener {
 		}
 		
 //		Update the intersections array with the surface normal vector:
-		this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0] = surfaceNormalX;
-		this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1] = surfaceNormalY;
-		this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2] = surfaceNormalZ;
+		this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0] = surfaceNormalX;
+		this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1] = surfaceNormalY;
+		this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2] = surfaceNormalZ;
 	}
 	
 	private void doUpdateSurfaceNormalForTriangle(final int intersectionOffset, final int shapeOffset) {
@@ -736,9 +736,9 @@ public final class RayCaster extends Kernel implements KeyListener {
 		final float surfaceNormalZ = this.shapes[shapeOffset + Triangle.RELATIVE_OFFSET_OF_TRIANGLE_SURFACE_NORMAL_VECTOR_IN_SHAPES + 2];
 		
 //		Update the intersections array with the surface normal vector:
-		this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0] = surfaceNormalX;
-		this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1] = surfaceNormalY;
-		this.intersections[intersectionOffset + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2] = surfaceNormalZ;
+		this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0] = surfaceNormalX;
+		this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1] = surfaceNormalY;
+		this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2] = surfaceNormalZ;
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -750,7 +750,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private static float doLengthSquared(final float[] vector, final int offset) {
 		return doDotProduct(vector, offset, vector, offset);
 	}
-	
+	/*
 	private static float[] doCreateIntersections(final int length) {
 		final float[] intersections = new float[length * Constants.SIZE_OF_INTERSECTION_IN_INTERSECTIONS];
 		
@@ -766,7 +766,7 @@ public final class RayCaster extends Kernel implements KeyListener {
 		}
 		
 		return intersections;
-	}
+	}*/
 	
 	private static float[] doCreatePixels(final int length) {
 		final float[] pixels = new float[length * Constants.SIZE_OF_PIXEL_IN_PIXELS];
