@@ -20,11 +20,11 @@ package org.macroing.gdt.openrc;
 
 final class Triangle extends Shape {
 	public static final float TYPE_TRIANGLE = 3.0F;
-	public static final int RELATIVE_OFFSET_OF_TRIANGLE_A_POINT_IN_SHAPES = 2;
-	public static final int RELATIVE_OFFSET_OF_TRIANGLE_B_POINT_IN_SHAPES = 5;
-	public static final int RELATIVE_OFFSET_OF_TRIANGLE_C_POINT_IN_SHAPES = 8;
-	public static final int RELATIVE_OFFSET_OF_TRIANGLE_SURFACE_NORMAL_VECTOR_IN_SHAPES = 11;
-	public static final int SIZE_OF_TRIANGLE_IN_SHAPES = 1 + 1 + 3 + 3 + 3 + 3;
+	public static final int RELATIVE_OFFSET_OF_TRIANGLE_A = 2;
+	public static final int RELATIVE_OFFSET_OF_TRIANGLE_B = 5;
+	public static final int RELATIVE_OFFSET_OF_TRIANGLE_C = 8;
+	public static final int RELATIVE_OFFSET_OF_TRIANGLE_SURFACE_NORMAL = 11;
+	public static final int SIZE_OF_TRIANGLE = 1 + 1 + 3 + 3 + 3 + 3;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
@@ -89,7 +89,7 @@ final class Triangle extends Shape {
 	
 	@Override
 	public int size() {
-		return SIZE_OF_TRIANGLE_IN_SHAPES;
+		return SIZE_OF_TRIANGLE;
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////

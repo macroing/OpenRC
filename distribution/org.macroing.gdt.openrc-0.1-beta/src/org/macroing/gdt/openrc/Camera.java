@@ -50,13 +50,13 @@ package org.macroing.gdt.openrc;
  * @author J&#246;rgen Lundgren
  */
 final class Camera {
-	public static final int ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT = 0;
-	public static final int ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR = 6;
-	public static final int ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR = 9;
-	public static final int ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR = 12;
-	public static final int ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR = 15;
-	public static final int ABSOLUTE_OFFSET_OF_CAMERA_UP_VECTOR = 3;
-	public static final int ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR = 18;
+	public static final int ABSOLUTE_OFFSET_OF_CAMERA_EYE = 0;
+	public static final int ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT = 6;
+	public static final int ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U = 9;
+	public static final int ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V = 12;
+	public static final int ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W = 15;
+	public static final int ABSOLUTE_OFFSET_OF_CAMERA_UP = 3;
+	public static final int ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE = 18;
 	public static final int SIZE_OF_CAMERA = 3 + 3 + 3 + 3 + 3 + 3 + 1;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -76,79 +76,79 @@ final class Camera {
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	public float getEyeX() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 0];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0];
 	}
 	
 	public float getEyeY() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 1];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1];
 	}
 	
 	public float getEyeZ() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 2];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2];
 	}
 	
 	public float getLookAtX() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR + 0];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0];
 	}
 	
 	public float getLookAtY() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR + 1];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1];
 	}
 	
 	public float getLookAtZ() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR + 2];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2];
 	}
 	
 	public float getUpX() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP_VECTOR + 0];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP + 0];
 	}
 	
 	public float getUpY() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP_VECTOR + 1];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP + 1];
 	}
 	
 	public float getUpZ() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP_VECTOR + 2];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP + 2];
 	}
 	
 	public float getOrthoNormalBasisUX() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 0];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U + 0];
 	}
 	
 	public float getOrthoNormalBasisUY() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 1];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U + 1];
 	}
 	
 	public float getOrthoNormalBasisUZ() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR + 2];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U + 2];
 	}
 	
 	public float getOrthoNormalBasisVX() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 0];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V + 0];
 	}
 	
 	public float getOrthoNormalBasisVY() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 1];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V + 1];
 	}
 	
 	public float getOrthoNormalBasisVZ() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR + 2];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V + 2];
 	}
 	
 	public float getOrthoNormalBasisWX() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 0];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W + 0];
 	}
 	
 	public float getOrthoNormalBasisWY() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 1];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W + 1];
 	}
 	
 	public float getOrthoNormalBasisWZ() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR + 2];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W + 2];
 	}
 	
 	public float getViewPlaneDistance() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR];
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE];
 	}
 	
 	public float[] getArray() {
@@ -156,41 +156,41 @@ final class Camera {
 	}
 	
 	public void calculateOrthonormalBasis() {
-		Vector.subtract(this.array, ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT, this.array, ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR);
-		doNormalize(this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR);
-		Vector.crossProduct(this.array, ABSOLUTE_OFFSET_OF_CAMERA_UP_VECTOR, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR);
-		doNormalize(this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR);
-		Vector.crossProduct(this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W_VECTOR, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U_VECTOR, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V_VECTOR);
+		Vector.subtract(this.array, ABSOLUTE_OFFSET_OF_CAMERA_EYE, this.array, ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W);
+		doNormalize(this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W);
+		Vector.crossProduct(this.array, ABSOLUTE_OFFSET_OF_CAMERA_UP, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U);
+		doNormalize(this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U);
+		Vector.crossProduct(this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V);
 	}
 	
 	public void move(final float x, final float y, final float z) {
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 0] += x;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 1] += y;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 2] += z;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0] += x;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1] += y;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2] += z;
 		
 		calculateOrthonormalBasis();
 	}
 	
 	public void setEye(final float x, final float y, final float z) {
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 0] = x;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 1] = y;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT + 2] = z;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0] = x;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1] = y;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2] = z;
 	}
 	
 	public void setLookAt(final float x, final float y, final float z) {
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR + 0] = x;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR + 1] = y;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR + 2] = z;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0] = x;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1] = y;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2] = z;
 	}
 	
 	public void setUp(final float x, final float y, final float z) {
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP_VECTOR + 0] = x;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP_VECTOR + 1] = y;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP_VECTOR + 2] = z;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP + 0] = x;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP + 1] = y;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP + 2] = z;
 	}
 	
 	public void setViewPlaneDistance(final float distance) {
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE_SCALAR] = distance;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE] = distance;
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////

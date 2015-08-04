@@ -20,9 +20,9 @@ package org.macroing.gdt.openrc;
 
 final class PointLight implements Light {
 	public static final float TYPE_POINT_LIGHT = 1.0F;
-	public static final int RELATIVE_OFFSET_OF_POINT_LIGHT_DISTANCE_FALLOFF_SCALAR_IN_LIGHTS = 5;
-	public static final int RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION_POINT_IN_LIGHTS = 2;
-	public static final int SIZE_OF_POINT_LIGHT_IN_LIGHTS = 1 + 1 + 3 + 1;
+	public static final int RELATIVE_OFFSET_OF_POINT_LIGHT_DISTANCE_FALLOFF = 5;
+	public static final int RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION = 2;
+	public static final int SIZE_OF_POINT_LIGHT = 1 + 1 + 3 + 1;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
@@ -61,6 +61,6 @@ final class PointLight implements Light {
 	
 	@Override
 	public int size() {
-		return SIZE_OF_POINT_LIGHT_IN_LIGHTS;
+		return SIZE_OF_POINT_LIGHT;
 	}
 }

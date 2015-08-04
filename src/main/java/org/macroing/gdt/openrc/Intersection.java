@@ -29,11 +29,11 @@ package org.macroing.gdt.openrc;
  * @author J&#246;rgen Lundgren
  */
 final class Intersection {
-	public static final int RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS = 1;
-	public static final int RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS = 0;
-	public static final int RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS = 2;
-	public static final int RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS = 5;
-	public static final int SIZE_OF_INTERSECTION_IN_INTERSECTIONS = 1 + 1 + 3 + 3;
+	public static final int RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE = 1;
+	public static final int RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET = 0;
+	public static final int RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT = 2;
+	public static final int RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL = 5;
+	public static final int SIZE_OF_INTERSECTION = 1 + 1 + 3 + 3;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
@@ -44,17 +44,17 @@ final class Intersection {
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	public static float[] create(final int length) {
-		final float[] intersections = new float[length * SIZE_OF_INTERSECTION_IN_INTERSECTIONS];
+		final float[] intersections = new float[length * SIZE_OF_INTERSECTION];
 		
-		for(int i = 0; i < intersections.length; i += SIZE_OF_INTERSECTION_IN_INTERSECTIONS) {
-			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS] = -1.0F;
-			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS] = Constants.MAXIMUM_DISTANCE;
-			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0] = 0.0F;
-			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1] = 0.0F;
-			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2] = 0.0F;
-			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0] = 0.0F;
-			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1] = 0.0F;
-			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2] = 0.0F;
+		for(int i = 0; i < intersections.length; i += SIZE_OF_INTERSECTION) {
+			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET] = -1.0F;
+			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE] = Constants.MAXIMUM_DISTANCE;
+			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT + 0] = 0.0F;
+			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT + 1] = 0.0F;
+			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT + 2] = 0.0F;
+			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL + 0] = 0.0F;
+			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL + 1] = 0.0F;
+			intersections[i + RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL + 2] = 0.0F;
 		}
 		
 		return intersections;

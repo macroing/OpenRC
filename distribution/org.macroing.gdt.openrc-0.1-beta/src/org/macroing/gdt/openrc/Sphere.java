@@ -22,10 +22,10 @@ import java.util.concurrent.ThreadLocalRandom;
 
 final class Sphere extends Shape {
 	public static final float TYPE_SPHERE = 1.0F;
-	public static final int RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES = 6;
-	public static final int RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES = 2;
-	public static final int RELATIVE_OFFSET_OF_SPHERE_RADIUS_SCALAR_IN_SHAPES = 5;
-	public static final int SIZE_OF_SPHERE_IN_SHAPES = 1 + 1 + 3 + 1 + 3;
+	public static final int RELATIVE_OFFSET_OF_SPHERE_COLOR = 6;
+	public static final int RELATIVE_OFFSET_OF_SPHERE_POSITION = 2;
+	public static final int RELATIVE_OFFSET_OF_SPHERE_RADIUS = 5;
+	public static final int SIZE_OF_SPHERE = 1 + 1 + 3 + 1 + 3;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
@@ -73,7 +73,7 @@ final class Sphere extends Shape {
 	
 	@Override
 	public int size() {
-		return SIZE_OF_SPHERE_IN_SHAPES;
+		return SIZE_OF_SPHERE;
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////

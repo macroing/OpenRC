@@ -23,10 +23,10 @@ final class Constants {
 	public static final float MAXIMUM_DISTANCE = Float.MAX_VALUE;
 	public static final float PI = (float)(Math.PI);
 	public static final int HEIGHT = 768;
-	public static final int RELATIVE_OFFSET_OF_RAY_DIRECTION_VECTOR_IN_RAYS = 3;
-	public static final int RELATIVE_OFFSET_OF_RAY_ORIGIN_POINT_IN_RAYS = 0;
-	public static final int SIZE_OF_PIXEL_IN_PIXELS = 1 + 1 + 1;
-	public static final int SIZE_OF_RAY_IN_RAYS = 3 + 3;
+	public static final int RELATIVE_OFFSET_OF_RAY_DIRECTION = 3;
+	public static final int RELATIVE_OFFSET_OF_RAY_ORIGIN = 0;
+	public static final int SIZE_OF_PIXEL = 1 + 1 + 1;
+	public static final int SIZE_OF_RAY = 3 + 3;
 	public static final int WIDTH = 1024;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
