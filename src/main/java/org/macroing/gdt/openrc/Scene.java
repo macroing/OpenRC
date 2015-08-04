@@ -21,7 +21,6 @@ package org.macroing.gdt.openrc;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 final class Scene {
@@ -94,7 +93,7 @@ final class Scene {
 		builder.addLight(new PointLight(400.0F, 20.0F, 600.0F, 100.0F));
 		
 		for(int i = 0; i < 500; i++) {
-			builder.addShape(doCreateRandomSphere());
+			builder.addShape(Sphere.random());
 		}
 		
 		builder.addShape(new Plane(1.0F, 0.0F, 0.0F));
@@ -195,15 +194,5 @@ final class Scene {
 			
 			return shapeIndices;
 		}
-	}
-	
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	
-	private static float doRandom(final float range) {
-		return ThreadLocalRandom.current().nextFloat() * range;
-	}
-	
-	private static Sphere doCreateRandomSphere() {
-		return new Sphere(doRandom(4000.0F), 16.5F, doRandom(4000.0F), 16.5F, doRandom(255.0F), doRandom(255.0F), doRandom(255.0F));
 	}
 }

@@ -18,6 +18,8 @@
  */
 package org.macroing.gdt.openrc;
 
+import java.util.concurrent.ThreadLocalRandom;
+
 final class Sphere extends Shape {
 	public static final float TYPE_SPHERE = 1.0F;
 	public static final int RELATIVE_OFFSET_OF_SPHERE_COLOR_RGB_IN_SHAPES = 6;
@@ -72,5 +74,17 @@ final class Sphere extends Shape {
 	@Override
 	public int size() {
 		return SIZE_OF_SPHERE_IN_SHAPES;
+	}
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	public static Sphere random() {
+		return new Sphere(doRandom(4000.0F), 16.5F, doRandom(4000.0F), 16.5F, doRandom(255.0F), doRandom(255.0F), doRandom(255.0F));
+	}
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	private static float doRandom(final float range) {
+		return ThreadLocalRandom.current().nextFloat() * range;
 	}
 }
