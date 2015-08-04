@@ -63,7 +63,7 @@ final class Scene {
 	}
 	
 	public int getShapeCount() {
-		return this.shapesAsArray.length;
+		return this.shapesAsList.size();
 	}
 	
 	public int[] getShapeIndices() {

@@ -232,7 +232,7 @@ final class RayCasterKernel extends Kernel {
 		this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS] = -1.0F;
 		this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS] = Constants.MAXIMUM_DISTANCE;
 		
-		for(int i = 0, shapeOffset = this.shapeIndices[i]; i < this.shapeIndicesLength && shapeOffset >= 0; i++, shapeOffset = this.shapeIndices[min(i, this.shapeIndicesLength - 1)]) {
+		for(int i = 0, shapeOffset = this.shapeIndices[i]; i < this.shapeIndicesLength && shapeOffset >= 0; i++, shapeOffset = this.shapeIndices[i]) {
 //			Initialize the temporary type and size variables of the current shape:
 			final float shapeType = this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES];
 //			final float shapeSize = this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_SIZE_SCALAR_IN_SHAPES];

@@ -263,7 +263,7 @@ public final class Application implements KeyListener {
 		jFrame.setIgnoreRepaint(true);
 		jFrame.setSize(bufferedImage.getWidth(), bufferedImage.getHeight());
 		jFrame.setLocationRelativeTo(null);
-		jFrame.setTitle("OpenRC - OpenCL Ray Caster");
+		jFrame.setTitle(String.format("OpenRC v%s", Constants.getVersion()));
 		jFrame.setVisible(true);
 		jFrame.createBufferStrategy(2);
 		jFrame.repaint();
