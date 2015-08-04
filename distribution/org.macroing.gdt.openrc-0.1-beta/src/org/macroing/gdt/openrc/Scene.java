@@ -25,11 +25,6 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 final class Scene {
-//	private final AtomicInteger index = new AtomicInteger();
-//	private final Camera camera = new Camera();
-//	private final List<Light> lights = new ArrayList<>();
-//	private final List<Shape> shapes = new ArrayList<>();
-//	private final Texture texture = Texture.create("Texture.jpg");
 	private final Camera camera;
 	private final float[] lightsAsArray;
 	private final float[] shapesAsArray;
@@ -142,6 +137,8 @@ final class Scene {
 		public Scene build() {
 			return new Scene(this.camera, doCreateLights(), doCreateShapes(), doCreateShapeIndices(), this.lights, this.shapes, this.texture);
 		}
+		
+		////////////////////////////////////////////////////////////////////////////////////////////////////
 		
 		private float[] doCreateLights() {
 			int length = 0;
