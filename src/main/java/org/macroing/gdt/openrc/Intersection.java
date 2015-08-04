@@ -18,6 +18,16 @@
  */
 package org.macroing.gdt.openrc;
 
+/**
+ * The values in the {@code float} array created by the {@code create(int)} method consists of the following:
+ * <ol>
+ * <li>Shape offset</li>
+ * <li>Shape distance (T)</li>
+ * </ol>
+ * 
+ * @since 1.0.0
+ * @author J&#246;rgen Lundgren
+ */
 final class Intersection {
 	public static final int RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS = 1;
 	public static final int RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS = 0;

@@ -18,7 +18,37 @@
  */
 package org.macroing.gdt.openrc;
 
-//TODO: Find out whether Look-at Z and View-plane distance are correlated in some way!?
+/**
+ * The values in the {@code float} array {@code array} consists of the following:
+ * <ol>
+ * <li>Eye X</li>
+ * <li>Eye Y</li>
+ * <li>Eye Z</li>
+ * <li>Up X</li>
+ * <li>Up Y</li>
+ * <li>Up Z</li>
+ * <li>Look-at X</li>
+ * <li>Look-at Y</li>
+ * <li>Look-at Z</li>
+ * <li>ONB-U X</li>
+ * <li>ONB-U Y</li>
+ * <li>ONB-U Z</li>
+ * <li>ONB-V X</li>
+ * <li>ONB-V Y</li>
+ * <li>ONB-V Z</li>
+ * <li>ONB-W X</li>
+ * <li>ONB-W Y</li>
+ * <li>ONB-W Z</li>
+ * <li>View-plane distance</li>
+ * </ol>
+ * <p>
+ * If you don't know what ONB stands for, then it is OrthoNormal Basis.
+ * 
+ * TODO: Find out whether Look-at Z and View-plane distance are correlated in some way!?
+ * 
+ * @since 1.0.0
+ * @author J&#246;rgen Lundgren
+ */
 final class Camera {
 	public static final int ABSOLUTE_OFFSET_OF_CAMERA_EYE_POINT = 0;
 	public static final int ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT_VECTOR = 6;

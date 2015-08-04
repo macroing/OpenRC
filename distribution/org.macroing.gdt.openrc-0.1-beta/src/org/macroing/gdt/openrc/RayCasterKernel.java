@@ -18,79 +18,23 @@
  */
 package org.macroing.gdt.openrc;
 
-import java.awt.Color;
-import java.awt.Dimension;
-import java.awt.event.KeyEvent;
-import java.awt.event.KeyListener;
-import java.awt.image.BufferedImage;
-import java.awt.image.DataBuffer;
-import java.awt.image.DataBufferInt;
-import java.awt.image.WritableRaster;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicBoolean;
-
-import javax.swing.BorderFactory;
-import javax.swing.JFrame;
-import javax.swing.JPanel;
-
 import com.amd.aparapi.Kernel;
-import com.amd.aparapi.Range;
 
 /**
- * An OpenCL-based Ray Caster using Aparapi.
- * <p>
- * The values in the {@code float} array {@code cameraValues} consists of Eye X, Eye Y, Eye Z, Up X, Up Y, Up Z, Look-at X, Look-at Y, Look-at Z, ONB-U X, ONB-U Y, ONB-U Z, ONB-V X, ONB-V Y, ONB-V Z, ONB-W X, ONB-W Y, ONB-W Z and View-plane distance.
- * <p>
- * If you don't know what ONB stands for, then it is OrthoNormal Basis.
- * <p>
- * The values in the {@code float} array {@code intersections} consists of Shape Offset and Distance (T), for each shape currently being intersected by a ray.
- * <p>
- * The values in the {@code float} array {@code lights} consists of Type, Size and {@code float}[Size], for each light defined.
- * <p>
- * The values in the {@code float} array {@code rays} consists of Origin X, Origin Y, Origin Z, Direction X, Direction Y and Direction Z, for each ray fired from each pixel.
- * <p>
- * The values in the {@code float} array {@code shapes} consists of Type, Size and {@code float}[Size], for each shape defined.
- * <p>
- * The controls currently defined are the following:
- * <ul>
- * <li>A - Move left.</li>
- * <li>D - Move right.</li>
- * <li>E - Display the current execution mode to standard output.</li>
- * <li>ESC - Exit the program. You may have to press a few times if you're using the execution mode JTP (Java Thread Pool), as it's pretty unresponsive.</li>
- * <li>S - Move backward.</li>
- * <li>T - Toggle between the two execution modes GPU and JTP (Java Thread Pool).</li>
- * <li>W - Move forward.</li>
- * </ul>
- * <p>
- * The features currently supported are the following:
- * <ul>
- * <li>Shapes such as planes, spheres and triangles.</li>
- * <li>Lights such as point lights.</li>
- * <li>Textures such as normal color textures.</li>
- * <li>Texture mapping such as spherical texture mapping.</li>
- * <li>Ray Casting, which corresponds to the primary rays of Ray Tracing. This means no reflections and refractions are shown. At least not yet.</li>
- * </ul>
- * <p>
- * Note that the features above will probably be expanded upon with time.
+ * The values in the {@code float} array {@code rays} consists of the following:
+ * <ol>
+ * <li>Origin X</li>
+ * <li>Origin Y</li>
+ * <li>Origin Z</li>
+ * <li>Direction X</li>
+ * <li>Direction Y</li>
+ * <li>Direction Z</li>
+ * </ol>
  * 
  * @since 1.0.0
  * @author J&#246;rgen Lundgren
  */
-public final class RayCaster extends Kernel implements KeyListener {
-//	The following variables are only used by the CPU:
-	private final AtomicBoolean isPrintingExecutionMode = new AtomicBoolean();
-	private final AtomicBoolean isRunning = new AtomicBoolean();
-	private final AtomicBoolean isTerminationRequested = new AtomicBoolean();
-	private final AtomicBoolean isTogglingExecutionMode = new AtomicBoolean();
-	private final boolean[] isKeyPressed;
-	private final BufferedImage bufferedImage;
-	private final Camera camera;
-	private final FPSCounter fPSCounter;
-	private final JFrame jFrame;
-	private final Range range;
-	private final Scene scene;
-	
-//	The following variables are used by the GPU (and if not all, at least a few are also used by the CPU):
+final class RayCasterKernel extends Kernel {
 	private final float[] cameraValues;
 	private final float[] intersections;
 	private final float[] lights;
@@ -109,66 +53,36 @@ public final class RayCaster extends Kernel implements KeyListener {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	private RayCaster() {
-		final Scene scene = Scene.create();
-		
-		final Texture texture = Texture.create("Texture.jpg");
-		
-		this.bufferedImage = new BufferedImage(Constants.WIDTH, Constants.HEIGHT, BufferedImage.TYPE_INT_RGB);
-		this.camera = new Camera();
-		this.cameraValues = this.camera.getArray();
-		this.fPSCounter = new FPSCounter();
-		this.height = this.bufferedImage.getHeight();
-		this.intersections = Intersection.create(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
-		this.isKeyPressed = new boolean[256];
-		this.jFrame = doCreateJFrame(this.bufferedImage, this.camera, this.fPSCounter);
+	public RayCasterKernel(final int[] rGB, final Scene scene) {
+		this.cameraValues = scene.getCamera().getArray();
+		this.intersections = Intersection.create(Constants.WIDTH * Constants.HEIGHT);
 		this.lights = scene.getLightsAsArray();
-		this.lightsLength = this.lights.length;
-		this.pixels = doCreatePixels(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
-		this.range = Range.create(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
-		this.rays = doCreateRays(this.bufferedImage.getWidth() * this.bufferedImage.getHeight());
-		this.rGB = doToRGB(this.bufferedImage);
-		this.scene = scene;
-		this.shapeIndices = scene.getShapeIndices();
-		this.shapeIndicesLength = this.shapeIndices.length;
+		this.pixels = new float[Constants.WIDTH * Constants.HEIGHT * Constants.SIZE_OF_PIXEL_IN_PIXELS];
+		this.rays = new float[Constants.WIDTH * Constants.HEIGHT * Constants.SIZE_OF_RAY_IN_RAYS];
 		this.shapes = scene.getShapesAsArray();
-		this.texture = texture.getData();
-		this.textureHeight = texture.getHeight();
-		this.textureWidth = texture.getWidth();
-		this.width = this.bufferedImage.getWidth();
+		this.height = Constants.HEIGHT;
+		this.lightsLength = this.lights.length;
+		this.shapeIndicesLength = scene.getShapeCount();
+		this.textureHeight = scene.getTexture().getHeight();
+		this.textureWidth = scene.getTexture().getWidth();
+		this.width = Constants.WIDTH;
+		this.rGB = rGB;
+		this.shapeIndices = scene.getShapeIndices();
+		this.texture = scene.getTexture().getData();
+		
+//		Make the Kernel instance explicit, such that we have to take care of all array transfers to and from the GPU:
+		setExplicit(true);
+		
+//		Tell the API to fetch the below arrays and their values before executing this Kernel instance (they will be transferred to the GPU):
+		put(this.intersections);
+		put(this.lights);
+		put(this.rays);
+		put(this.shapes);
+		put(this.rGB);
+		put(this.texture);
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
-	
-	/**
-	 * Overridden to handle key typing.
-	 * 
-	 * @param e a {@code KeyEvent}
-	 */
-	@Override
-	public void keyTyped(final KeyEvent e) {
-//		Do nothing here.
-	}
-	
-	/**
-	 * Overridden to handle key pressing.
-	 * 
-	 * @param e a {@code KeyEvent}
-	 */
-	@Override
-	public void keyPressed(final KeyEvent e) {
-		this.isKeyPressed[e.getKeyCode()] = true;
-	}
-	
-	/**
-	 * Overridden to handle key releasing.
-	 * 
-	 * @param e a {@code KeyEvent}
-	 */
-	@Override
-	public void keyReleased(final KeyEvent e) {
-		this.isKeyPressed[e.getKeyCode()] = false;
-	}
 	
 	/**
 	 * This is what the {@code Kernel} executes on the GPU (or in the CPU).
@@ -238,72 +152,6 @@ public final class RayCaster extends Kernel implements KeyListener {
 		
 //		Set the RGB-value of the current pixel:
 		this.rGB[index] = doToRGB(r, g, b);
-	}
-	
-	/**
-	 * Called to start the Ray Caster.
-	 */
-	public void start() {
-//		Add a shutdown hook that stops the execution and subsequently disposes of any resources:
-		Runtime.getRuntime().addShutdownHook(new Thread(() -> this.isRunning.set(false)));
-		
-//		Initialize the field isRunning to true:
-		this.isRunning.set(true);
-		
-//		Add a KeyListener to the JFrame:
-		SwingUtilities2.invokeAndWait(() -> this.jFrame.addKeyListener(this));
-		
-//		Make this Kernel instance explicit, such that we have to take care of all array transfers to and from the GPU:
-		setExplicit(true);
-		
-//		Tell the API to fetch the below arrays and their values before executing this Kernel instance (they will be transferred to the GPU):
-		put(this.intersections);
-		put(this.lights);
-		put(this.rays);
-		put(this.shapes);
-		put(this.rGB);
-		
-		while(this.isRunning.get()) {
-//			Update the current frame:
-			doUpdate();
-			
-//			Tell the API to fetch the camera values before executing this Kernel instance (it will be transferred to the GPU every cycle):
-			put(this.cameraValues);
-			
-//			Tell the API to fetch the shape indices before executing this Kernel instance (it will be transferred to the GPU every cycle):
-			put(this.shapeIndices);
-			
-//			Execute this Kernel instance:
-			execute(this.range);
-			
-//			Fetch the RGB-values calculated in the GPU to the rGB array, so we can display the result:
-			get(this.rGB);
-			
-//			Tell the JFrame to repaint itself:
-			this.jFrame.repaint();
-			
-//			Update the FPS in the FPSCounter:
-			this.fPSCounter.update();
-		}
-		
-//		Tell the Kernel to dispose of any resources used.
-		dispose();
-		
-//		Tell the JFrame to dispose of any resources used.
-		this.jFrame.dispose();
-	}
-	
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	
-	/**
-	 * The entry-point of this Ray Caster.
-	 * 
-	 * @param args these are not used
-	 */
-	public static void main(final String[] args) {
-		final
-		RayCaster rayCaster = SwingUtilities2.runInEDT(() -> new RayCaster());
-		rayCaster.start();
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -587,16 +435,6 @@ public final class RayCaster extends Kernel implements KeyListener {
 		vector[offset + 2] *= lengthReciprocal;
 	}
 	
-	private void doPerformFrustumCulling() {
-//		TODO: Implement View Frustum Culling here.
-		
-		final List<Shape> shapes = this.scene.getShapesAsList();
-		
-		for(int i = 0; i < this.shapeIndicesLength; i++) {
-			this.shapeIndices[i] = shapes.get(i).getIndex();
-		}
-	}
-	
 	private void doPerformSphericalTextureMapping(final int intersectionOffset, final int pixelOffset, final int shapeOffset) {
 //		Initialize the variables with the position (the X-, Y- and Z-values) of the sphere:
 		final float sphereX = this.shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_SPHERE_POSITION_POINT_IN_SHAPES + 0];
@@ -637,49 +475,6 @@ public final class RayCaster extends Kernel implements KeyListener {
 		this.pixels[pixelOffset + 0] = doToR(textureRGB);
 		this.pixels[pixelOffset + 1] = doToG(textureRGB);
 		this.pixels[pixelOffset + 2] = doToB(textureRGB);
-	}
-	
-	private void doUpdate() {
-//		Calculate the movement based on some velocity, calculated as the distance moved per second:
-		final float velocity = 250.0F;
-		final float movement = this.fPSCounter.getFrameTimeMillis() / 1000.0F * velocity;
-		
-		if(this.isKeyPressed[KeyEvent.VK_A]) {
-			this.camera.move(-movement, 0.0F, 0.0F);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_D]) {
-			this.camera.move(movement, 0.0F, 0.0F);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_E] && this.isPrintingExecutionMode.compareAndSet(false, true)) {
-			System.out.printf("ExecutionMode: %s%n", getExecutionMode());
-		} else if(!this.isKeyPressed[KeyEvent.VK_E]) {
-			this.isPrintingExecutionMode.compareAndSet(true, false);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_ESCAPE] && this.isTerminationRequested.compareAndSet(false, true)) {
-			this.isRunning.set(false);
-		} else if(!this.isKeyPressed[KeyEvent.VK_ESCAPE]) {
-			this.isTerminationRequested.compareAndSet(true, false);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_S]) {
-			this.camera.move(0.0F, 0.0F, movement);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_T] && this.isTogglingExecutionMode.compareAndSet(false, true)) {
-			setExecutionMode(getExecutionMode() == EXECUTION_MODE.GPU ? EXECUTION_MODE.JTP : EXECUTION_MODE.GPU);
-		} else if(!this.isKeyPressed[KeyEvent.VK_T]) {
-			this.isTogglingExecutionMode.compareAndSet(true, false);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_W]) {
-			this.camera.move(0.0F, 0.0F, -movement);
-		}
-		
-//		Perform View Frustum Culling:
-		doPerformFrustumCulling();
 	}
 	
 	private void doUpdateSurfaceNormalForPlane(final int intersectionOffset, final int shapeOffset) {
@@ -750,39 +545,6 @@ public final class RayCaster extends Kernel implements KeyListener {
 	private static float doLengthSquared(final float[] vector, final int offset) {
 		return doDotProduct(vector, offset, vector, offset);
 	}
-	/*
-	private static float[] doCreateIntersections(final int length) {
-		final float[] intersections = new float[length * Constants.SIZE_OF_INTERSECTION_IN_INTERSECTIONS];
-		
-		for(int i = 0; i < intersections.length; i += Constants.SIZE_OF_INTERSECTION_IN_INTERSECTIONS) {
-			intersections[i + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET_SCALAR_IN_INTERSECTIONS] = -1.0F;
-			intersections[i + Constants.RELATIVE_OFFSET_OF_INTERSECTION_DISTANCE_SCALAR_IN_INTERSECTIONS] = Constants.MAXIMUM_DISTANCE;
-			intersections[i + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 0] = 0.0F;
-			intersections[i + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 1] = 0.0F;
-			intersections[i + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT_IN_INTERSECTIONS + 2] = 0.0F;
-			intersections[i + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 0] = 0.0F;
-			intersections[i + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 1] = 0.0F;
-			intersections[i + Constants.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL_VECTOR_IN_INTERSECTIONS + 2] = 0.0F;
-		}
-		
-		return intersections;
-	}*/
-	
-	private static float[] doCreatePixels(final int length) {
-		final float[] pixels = new float[length * Constants.SIZE_OF_PIXEL_IN_PIXELS];
-		
-		for(int i = 0; i < pixels.length; i += Constants.SIZE_OF_PIXEL_IN_PIXELS) {
-			pixels[i + 0] = 0.0F;
-			pixels[i + 1] = 0.0F;
-			pixels[i + 2] = 0.0F;
-		}
-		
-		return pixels;
-	}
-	
-	private static float[] doCreateRays(final int length) {
-		return new float[length * Constants.SIZE_OF_RAY_IN_RAYS];
-	}
 	
 	private static int doToB(final int rGB) {
 		return (rGB >> 0) & 0xFF;
@@ -798,44 +560,5 @@ public final class RayCaster extends Kernel implements KeyListener {
 	
 	private static int doToRGB(final int r, final int g, final int b) {
 		return ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | ((b & 0xFF) << 0);
-	}
-	
-	private static int[] doToRGB(final BufferedImage bufferedImage) {
-		final WritableRaster writableRaster = bufferedImage.getRaster();
-		
-		final DataBuffer dataBuffer = writableRaster.getDataBuffer();
-		
-		final DataBufferInt dataBufferInt = DataBufferInt.class.cast(dataBuffer);
-		
-		final int[] rGB = dataBufferInt.getData();
-		
-		return rGB;
-	}
-	
-	private static JFrame doCreateJFrame(final BufferedImage bufferedImage, final Camera camera, final FPSCounter fPSCounter) {
-		final
-		JFrame jFrame = new JFrame();
-		jFrame.setContentPane(doCreateJPanel(bufferedImage, camera, fPSCounter));
-		jFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-		jFrame.setFocusTraversalKeysEnabled(false);
-		jFrame.setIgnoreRepaint(true);
-		jFrame.setSize(bufferedImage.getWidth(), bufferedImage.getHeight());
-		jFrame.setLocationRelativeTo(null);
-		jFrame.setTitle("OpenRC - OpenCL Ray Caster");
-		jFrame.setVisible(true);
-		jFrame.createBufferStrategy(2);
-		jFrame.repaint();
-		
-		return jFrame;
-	}
-	
-	private static JPanel doCreateJPanel(final BufferedImage bufferedImage, final Camera camera, final FPSCounter fPSCounter) {
-		final
-		JPanel jPanel = new JBufferedImagePanel(bufferedImage, camera, fPSCounter);
-		jPanel.setBorder(BorderFactory.createLineBorder(Color.WHITE, 1));
-		jPanel.setLayout(new AbsoluteLayoutManager());
-		jPanel.setPreferredSize(new Dimension(bufferedImage.getWidth(), bufferedImage.getHeight()));
-		
-		return jPanel;
 	}
 }

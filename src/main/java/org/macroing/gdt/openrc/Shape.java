@@ -18,6 +18,17 @@
  */
 package org.macroing.gdt.openrc;
 
+/**
+ * The values in the {@code float} array created by the {@code toFloatArray()} method consists of the following:
+ * <ol>
+ * <li>Type</li>
+ * <li>Size</li>
+ * <li>Data[Size - 2]</li>
+ * </ol>
+ * 
+ * @since 1.0.0
+ * @author J&#246;rgen Lundgren
+ */
 abstract class Shape {
 	public static final int RELATIVE_OFFSET_OF_SHAPE_TYPE_SCALAR_IN_SHAPES = 0;
 	public static final int RELATIVE_OFFSET_OF_SHAPE_SIZE_SCALAR_IN_SHAPES = 1;

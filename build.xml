@@ -4,7 +4,7 @@
 	<property name="java.source" value="1.8"/>
 	<property name="java.target" value="1.8"/>
 	<property name="project.class.classpath" value=". aparapi.jar"/>
-	<property name="project.class.main" value="org.macroing.gdt.openrc.RayCaster"/>
+	<property name="project.class.main" value="org.macroing.gdt.openrc.Application"/>
 	<property name="project.version" value="0.1-beta"/>
 	<property name="root.directory" location="."/>
 	<property name="vendor.name" value="Macroing.org"/>
