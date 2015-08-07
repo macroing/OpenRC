@@ -76,7 +76,7 @@ public final class Application implements KeyListener {
 	private final AtomicBoolean isRunning = new AtomicBoolean();
 	private final AtomicBoolean isTerminationRequested = new AtomicBoolean();
 	private final AtomicBoolean isTogglingExecutionMode = new AtomicBoolean();
-	private final boolean[] isKeyPressed = new boolean[256];
+	private final boolean[] isKeyPressed = new boolean[1024];
 	private final BufferedImage bufferedImage = new BufferedImage(Constants.WIDTH, Constants.HEIGHT, BufferedImage.TYPE_INT_RGB);
 	private final FPSCounter fPSCounter = new FPSCounter();
 	private final int[] rGB;

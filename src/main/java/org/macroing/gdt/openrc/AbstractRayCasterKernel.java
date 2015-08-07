@@ -142,9 +142,9 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		final int textureRGB = texture[textureIndex];
 		
 //		Update the RGB-values of the pixels array:
-		pixels[pixelOffset + 0] = toR(textureRGB);
-		pixels[pixelOffset + 1] = toG(textureRGB);
-		pixels[pixelOffset + 2] = toB(textureRGB);
+		pixels[pixelOffset + 0] += toR(textureRGB);
+		pixels[pixelOffset + 1] += toG(textureRGB);
+		pixels[pixelOffset + 2] += toB(textureRGB);
 	}
 	
 	public void updateSurfaceNormalForSphere(final float[] intersections, final float[] shapes, final int intersectionOffset, final int shapeOffset) {

@@ -115,19 +115,23 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		int g = 0;
 		int b = 0;
 		
+		this.pixels[pixelOffset + 0] = r;
+		this.pixels[pixelOffset + 1] = g;
+		this.pixels[pixelOffset + 2] = b;
+		
 		if(distance > 0.0F && distance < Constants.MAXIMUM_DISTANCE) {
 //			Initialize needed offset values:
 			final int intersectionOffset = index * Intersection.SIZE_OF_INTERSECTION;
 			final int shapeOffset = (int)(this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET]);
 			
 //			Calculate the shading for the intersected shape at the surface intersection point:
-			final float shading = doCalculateShading(intersectionOffset, shapeOffset);
+			final float shading = doCalculateShading(intersectionOffset, pixelOffset, shapeOffset);
 			
 			if(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_TYPE] == Plane.TYPE_PLANE) {
 //				A temporary way to give the plane some color:
-				this.pixels[pixelOffset + 0] = 255.0F;
-				this.pixels[pixelOffset + 1] = 255.0F;
-				this.pixels[pixelOffset + 2] = 255.0F;
+				this.pixels[pixelOffset + 0] += 255.0F;
+				this.pixels[pixelOffset + 1] += 255.0F;
+				this.pixels[pixelOffset + 2] += 0.0F;
 			}
 			
 			if(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_TYPE] == Sphere.TYPE_SPHERE) {
@@ -137,9 +141,9 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 			
 			if(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_TYPE] == Triangle.TYPE_TRIANGLE) {
 //				A temporary way to give the triangle some color:
-				this.pixels[pixelOffset + 0] = 255.0F;
-				this.pixels[pixelOffset + 1] = 255.0F;
-				this.pixels[pixelOffset + 2] = 255.0F;
+				this.pixels[pixelOffset + 0] += 0.0F;
+				this.pixels[pixelOffset + 1] += 255.0F;
+				this.pixels[pixelOffset + 2] += 0.0F;
 			}
 			
 //			Update the RGB-values of the current pixel, given the RGB-values of the intersected shape:
@@ -155,7 +159,7 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	@SuppressWarnings("unused")
-	private float doCalculateShading(final int intersectionOffset, final int shapeOffset) {
+	private float doCalculateShading(final int intersectionOffset, final int pixelOffset, final int shapeOffset) {
 //		Initialize the shading value:
 		float shading = 0.0F;
 		
@@ -195,8 +199,36 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 				dy *= lengthReciprocal;
 				dz *= lengthReciprocal;
 				
+				final float dotProduct = dx * surfaceNormalX + dy * surfaceNormalY + dz * surfaceNormalZ;
+				final float dotProductNegative = -dotProduct;
+				
 //				Calculate the shading as the maximum value of 0.0 and the dot product of the delta vector and the surface normal vector, then add it to the shading variable:
-				shading += dx * surfaceNormalX + dy * surfaceNormalY + dz * surfaceNormalZ;
+				shading += dotProduct;
+				
+//				TODO: Fix this specular calculation:
+				if(dotProductNegative > 0.0F) {
+					final float dotProductNegativeTimes2 = dotProductNegative * 2.0F;
+					
+					float surfaceNormal0X = surfaceNormalX * dotProductNegativeTimes2 + dx;
+					float surfaceNormal0Y = surfaceNormalY * dotProductNegativeTimes2 + dy;
+					float surfaceNormal0Z = surfaceNormalZ * dotProductNegativeTimes2 + dz;
+					
+					final float surfaceNormal0LengthReciprocal = 1.0F / sqrt(surfaceNormal0X * surfaceNormal0X + surfaceNormal0Y * surfaceNormal0Y + surfaceNormal0Z * surfaceNormal0Z);
+					
+					surfaceNormal0X *= surfaceNormal0LengthReciprocal;
+					surfaceNormal0Y *= surfaceNormal0LengthReciprocal;
+					surfaceNormal0Z *= surfaceNormal0LengthReciprocal;
+					
+					final float negativeDotProduct = -(dx * surfaceNormal0X + dy * surfaceNormal0Y + dz * surfaceNormal0Z);
+					final float minimumValue = 0.0F;
+					final float maximumValue = max(negativeDotProduct, minimumValue);
+					final float specularPower = 32.0F;
+					final float specular = pow(maximumValue, specularPower);
+					
+					this.pixels[pixelOffset + 0] += 1.0F * specular;
+					this.pixels[pixelOffset + 1] += 1.0F * specular;
+					this.pixels[pixelOffset + 2] += 1.0F * specular;
+				}
 			}
 		}
 		
