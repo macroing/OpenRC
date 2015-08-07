@@ -98,6 +98,7 @@ final class Scene {
 		builder.addTexture(Texture.createSolidTexture("Texture_1.png"));
 		builder.addTexture(Texture.createSolidTexture("Texture_2.png"));
 		builder.addTexture(Texture.createSolidTexture("Texture_3.png"));
+		builder.addTexture(Texture.createDecalTexture("Texture_4.png"));
 		builder.addLight(new PointLight(400.0F, 20.0F, 400.0F, 100.0F));
 		builder.addLight(new PointLight(600.0F, 20.0F, 600.0F, 100.0F));
 		builder.addLight(new PointLight(600.0F, 20.0F, 400.0F, 100.0F));
@@ -106,7 +107,7 @@ final class Scene {
 		final int[] textureOffsets = builder.calculateTextureOffsets();
 		
 		for(int i = 0; i < 500; i++) {
-			builder.addShape(Sphere.random(textureOffsets[doRandom(textureOffsets.length)]));
+			builder.addShape(Sphere.random(textureOffsets[doRandom(textureOffsets.length - 1)], textureOffsets[4]));
 		}
 		
 		builder.addShape(new Plane(1.0F, 0.0F, 0.0F));

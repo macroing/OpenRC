@@ -107,9 +107,9 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		final float distance = findIntersection(this.intersections, this.rays, this.shapes, this.shapeIndicesLength, this.shapeIndices);
 		
 //		Initialize the RGB-values of the current pixel to black:
-		int r = 0;
-		int g = 0;
-		int b = 0;
+		float r = 0.0F;
+		float g = 0.0F;
+		float b = 0.0F;
 		
 		this.pixels[pixelOffset + 0] = r;
 		this.pixels[pixelOffset + 1] = g;
@@ -125,9 +125,9 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 			
 			if(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_TYPE] == Plane.TYPE_PLANE) {
 //				A temporary way to give the plane some color:
-				this.pixels[pixelOffset + 0] += 255.0F;
-				this.pixels[pixelOffset + 1] += 255.0F;
-				this.pixels[pixelOffset + 2] += 0.0F;
+				this.pixels[pixelOffset + 0] = 1.0F;
+				this.pixels[pixelOffset + 1] = 1.0F;
+				this.pixels[pixelOffset + 2] = 0.0F;
 			}
 			
 			if(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_TYPE] == Sphere.TYPE_SPHERE) {
@@ -145,19 +145,32 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 			
 			if(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_TYPE] == Triangle.TYPE_TRIANGLE) {
 //				A temporary way to give the triangle some color:
-				this.pixels[pixelOffset + 0] += 0.0F;
-				this.pixels[pixelOffset + 1] += 255.0F;
-				this.pixels[pixelOffset + 2] += 0.0F;
+				this.pixels[pixelOffset + 0] = 0.0F;
+				this.pixels[pixelOffset + 1] = 1.0F;
+				this.pixels[pixelOffset + 2] = 0.0F;
 			}
 			
 //			Update the RGB-values of the current pixel, given the RGB-values of the intersected shape:
-			r = (int)(this.pixels[pixelOffset + 0] * shading);
-			g = (int)(this.pixels[pixelOffset + 1] * shading);
-			b = (int)(this.pixels[pixelOffset + 2] * shading);
+			r = this.pixels[pixelOffset + 0] * shading;
+			g = this.pixels[pixelOffset + 1] * shading;
+			b = this.pixels[pixelOffset + 2] * shading;
+		}
+		
+//		Calculate the maximum component value (used in Tone Mapping):
+		final float maximumComponentValue = max(r, max(g, b));
+		
+		if(maximumComponentValue > 1.0F) {
+//			Calculate the reciprocal of the maximum component value:
+			final float maximumComponentValueReciprocal = 1.0F / maximumComponentValue;
+			
+//			Perform the Tone Mapping:
+			r *= maximumComponentValueReciprocal;
+			g *= maximumComponentValueReciprocal;
+			b *= maximumComponentValueReciprocal;
 		}
 		
 //		Set the RGB-value of the current pixel:
-		this.rGB[index] = toRGB(r, g, b);
+		this.rGB[index] = toRGB((int)(r * 255.0F), (int)(g * 255.0F), (int)(b * 255.0F));
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////

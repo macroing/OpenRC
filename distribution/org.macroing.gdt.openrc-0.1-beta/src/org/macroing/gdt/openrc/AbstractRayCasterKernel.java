@@ -21,6 +21,10 @@ package org.macroing.gdt.openrc;
 import com.amd.aparapi.Kernel;
 
 abstract class AbstractRayCasterKernel extends Kernel {
+	public static final float RGB_RECIPROCAL = 1.0F / 255.0F;
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
 	protected AbstractRayCasterKernel() {
 		
 	}
@@ -145,10 +149,22 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		final int textureIndex = textureY * textureWidth + textureX;
 		final int textureRGB = textures[textureOffset + Texture.RELATIVE_OFFSET_OF_TEXTURE_DATA + textureIndex];
 		
+//		Calculate the R-, G- and B-components of the RGB-value:
+		float r = toR(textureRGB) * RGB_RECIPROCAL;
+		float g = toG(textureRGB) * RGB_RECIPROCAL;
+		float b = toB(textureRGB) * RGB_RECIPROCAL;
+		
+		if(textures[textureOffset + Texture.RELATIVE_OFFSET_OF_TEXTURE_TYPE] == Texture.TYPE_DECAL_TEXTURE) {
+//			Update the decal RGB-components:
+			r = r < 0.5F ? 0.0F : ((r - 0.5F) * 2.0F);
+			g = g < 0.5F ? 0.0F : ((g - 0.5F) * 2.0F);
+			b = b < 0.5F ? 0.0F : ((b - 0.5F) * 2.0F);
+		}
+		
 //		Update the RGB-values of the pixels array:
-		pixels[pixelOffset + 0] += toR(textureRGB);
-		pixels[pixelOffset + 1] += toG(textureRGB);
-		pixels[pixelOffset + 2] += toB(textureRGB);
+		pixels[pixelOffset + 0] += r;
+		pixels[pixelOffset + 1] += g;
+		pixels[pixelOffset + 2] += b;
 	}
 	
 	public void updateSurfaceNormalForSphere(final float[] intersections, final float[] shapes, final int intersectionOffset, final int shapeOffset) {
