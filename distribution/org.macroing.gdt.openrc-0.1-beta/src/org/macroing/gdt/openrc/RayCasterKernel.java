@@ -42,12 +42,10 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 	private final int height;
 	private final int lightsLength;
 	private final int shapeIndicesLength;
-	private final int textureHeight;
-	private final int textureWidth;
 	private final int width;
 	private final int[] rGB;
 	private final int[] shapeIndices;
-	private final int[] texture;
+	private final int[] textures;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
@@ -61,12 +59,10 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		this.height = Constants.HEIGHT;
 		this.lightsLength = this.lights.length;
 		this.shapeIndicesLength = scene.getShapeCount();
-		this.textureHeight = scene.getTexture().getHeight();
-		this.textureWidth = scene.getTexture().getWidth();
 		this.width = Constants.WIDTH;
 		this.rGB = rGB;
 		this.shapeIndices = scene.getShapeIndices();
-		this.texture = scene.getTexture().getData();
+		this.textures = scene.getTexturesAsArray();
 		
 //		Make the Kernel instance explicit, such that we have to take care of all array transfers to and from the GPU:
 		setExplicit(true);
@@ -77,7 +73,7 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		put(this.rays);
 		put(this.shapes);
 		put(this.rGB);
-		put(this.texture);
+		put(this.textures);
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -135,8 +131,16 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 			}
 			
 			if(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_TYPE] == Sphere.TYPE_SPHERE) {
-//				Perform spherical texture mapping on the sphere:
-				performSphericalTextureMapping(this.intersections, this.pixels, this.shapes, intersectionOffset, pixelOffset, shapeOffset, this.textureWidth, this.textureHeight, this.texture);
+//				Initialize the texture count:
+				final int textureCount = (int)(this.shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_SPHERE_TEXTURE_COUNT]);
+				
+				for(int i = 0; i < textureCount; i++) {
+//					Initialize the texture offset:
+					final int textureOffset = (int)(this.shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_SPHERE_TEXTURE_COUNT + i + 1]);
+					
+//					Perform spherical texture mapping on the sphere:
+					performSphericalTextureMapping(this.intersections, this.pixels, this.shapes, intersectionOffset, pixelOffset, shapeOffset, textureOffset, this.textures);
+				}
 			}
 			
 			if(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_TYPE] == Triangle.TYPE_TRIANGLE) {

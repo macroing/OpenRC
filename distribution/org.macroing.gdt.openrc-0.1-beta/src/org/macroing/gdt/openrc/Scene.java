@@ -21,6 +21,7 @@ package org.macroing.gdt.openrc;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicInteger;
 
 final class Scene {
@@ -28,20 +29,22 @@ final class Scene {
 	private final float[] lightsAsArray;
 	private final float[] shapesAsArray;
 	private final int[] shapeIndices;
+	private final int[] texturesAsArray;
 	private final List<Light> lightsAsList;
 	private final List<Shape> shapesAsList;
-	private final Texture texture;
+	private final List<Texture> texturesAsList;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	Scene(final Camera camera, final float[] lightsAsArray, final float[] shapesAsArray, final int[] shapeIndices, final List<Light> lightsAsList, final List<Shape> shapesAsList, final Texture texture) {
+	Scene(final Camera camera, final float[] lightsAsArray, final float[] shapesAsArray, final int[] shapeIndices, final int[] texturesAsArray, final List<Light> lightsAsList, final List<Shape> shapesAsList, final List<Texture> texturesAsList) {
 		this.camera = camera;
 		this.lightsAsArray = lightsAsArray;
 		this.shapesAsArray = shapesAsArray;
 		this.shapeIndices = shapeIndices;
+		this.texturesAsArray = texturesAsArray;
 		this.lightsAsList = lightsAsList;
 		this.shapesAsList = shapesAsList;
-		this.texture = texture;
+		this.texturesAsList = texturesAsList;
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -70,6 +73,10 @@ final class Scene {
 		return this.shapeIndices;
 	}
 	
+	public int[] getTexturesAsArray() {
+		return this.texturesAsArray;
+	}
+	
 	public List<Light> getLightsAsList() {
 		return this.lightsAsList;
 	}
@@ -78,8 +85,8 @@ final class Scene {
 		return this.shapesAsList;
 	}
 	
-	public Texture getTexture() {
-		return this.texture;
+	public List<Texture> getTexturesAsList() {
+		return this.texturesAsList;
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -87,13 +94,19 @@ final class Scene {
 	public static Scene create() {
 		final
 		Builder builder = new Builder();
+		builder.addTexture(Texture.createSolidTexture("Texture_0.jpg"));
+		builder.addTexture(Texture.createSolidTexture("Texture_1.png"));
+		builder.addTexture(Texture.createSolidTexture("Texture_2.png"));
+		builder.addTexture(Texture.createSolidTexture("Texture_3.png"));
 		builder.addLight(new PointLight(400.0F, 20.0F, 400.0F, 100.0F));
 		builder.addLight(new PointLight(600.0F, 20.0F, 600.0F, 100.0F));
 		builder.addLight(new PointLight(600.0F, 20.0F, 400.0F, 100.0F));
 		builder.addLight(new PointLight(400.0F, 20.0F, 600.0F, 100.0F));
 		
+		final int[] textureOffsets = builder.calculateTextureOffsets();
+		
 		for(int i = 0; i < 500; i++) {
-			builder.addShape(Sphere.random());
+			builder.addShape(Sphere.random(textureOffsets[doRandom(textureOffsets.length)]));
 		}
 		
 		builder.addShape(new Plane(1.0F, 0.0F, 0.0F));
@@ -109,7 +122,7 @@ final class Scene {
 		private final Camera camera = new Camera();
 		private final List<Light> lights = new ArrayList<>();
 		private final List<Shape> shapes = new ArrayList<>();
-		private final Texture texture = Texture.create("Texture.jpg");
+		private final List<Texture> textures = new ArrayList<>();
 		
 		////////////////////////////////////////////////////////////////////////////////////////////////////
 		
@@ -133,8 +146,27 @@ final class Scene {
 			return this;
 		}
 		
+		public Builder addTexture(final Texture texture) {
+			this.textures.add(Objects.requireNonNull(texture, "texture == null"));
+			
+			return this;
+		}
+		
+		public int[] calculateTextureOffsets() {
+			final int[] textureOffsets = new int[this.textures.size()];
+			final int[] textures = doCreateTextures();
+			
+			for(int i = 0, j = 0; i < this.textures.size() && j < textures.length; i++) {
+				textureOffsets[i] = j;
+				
+				j += textures[j + Texture.RELATIVE_OFFSET_OF_TEXTURE_SIZE];
+			}
+			
+			return textureOffsets;
+		}
+		
 		public Scene build() {
-			return new Scene(this.camera, doCreateLights(), doCreateShapes(), doCreateShapeIndices(), this.lights, this.shapes, this.texture);
+			return new Scene(this.camera, doCreateLights(), doCreateShapes(), doCreateShapeIndices(), doCreateTextures(), this.lights, this.shapes, this.textures);
 		}
 		
 		////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -194,5 +226,32 @@ final class Scene {
 			
 			return shapeIndices;
 		}
+		
+		private int[] doCreateTextures() {
+			int length = 0;
+			int offset = 0;
+			
+			for(final Texture texture : this.textures) {
+				length += texture.size();
+			}
+			
+			final int[] array0 = new int[length];
+			
+			for(final Texture texture : this.textures) {
+				final int[] array1 = texture.toIntArray();
+				
+				System.arraycopy(array1, 0, array0, offset, array1.length);
+				
+				offset += array1.length;
+			}
+			
+			return array0;
+		}
+	}
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	private static int doRandom(final int bound) {
+		return ThreadLocalRandom.current().nextInt(bound);
 	}
 }

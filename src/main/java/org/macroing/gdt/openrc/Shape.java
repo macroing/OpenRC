@@ -30,8 +30,8 @@ package org.macroing.gdt.openrc;
  * @author J&#246;rgen Lundgren
  */
 abstract class Shape {
-	public static final int RELATIVE_OFFSET_OF_SHAPE_TYPE = 0;
 	public static final int RELATIVE_OFFSET_OF_SHAPE_SIZE = 1;
+	public static final int RELATIVE_OFFSET_OF_SHAPE_TYPE = 0;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	

@@ -105,7 +105,7 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		vector[offset + 2] *= lengthReciprocal;
 	}
 	
-	public void performSphericalTextureMapping(final float[] intersections, final float[] pixels, final float[] shapes, final int intersectionOffset, final int pixelOffset, final int shapeOffset, final int textureWidth, final int textureHeight, final int[] texture) {
+	public void performSphericalTextureMapping(final float[] intersections, final float[] pixels, final float[] shapes, final int intersectionOffset, final int pixelOffset, final int shapeOffset, final int textureOffset, final int[] textures) {
 //		Initialize the variables with the position (the X-, Y- and Z-values) of the sphere:
 		final float sphereX = shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_SPHERE_POSITION + 0];
 		final float sphereY = shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_SPHERE_POSITION + 1];
@@ -129,6 +129,10 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		final float distanceY = dy * lengthReciprocal;
 		final float distanceZ = dz * lengthReciprocal;
 		
+//		Initialize the width and height of the texture:
+		final int textureWidth = textures[textureOffset + Texture.RELATIVE_OFFSET_OF_TEXTURE_WIDTH];
+		final int textureHeight = textures[textureOffset + Texture.RELATIVE_OFFSET_OF_TEXTURE_HEIGHT];
+		
 //		Calculate the U- and V-values of the sphere on the surface intersection point:
 		final float textureU = 0.5F + atan2(distanceX, distanceZ) / (2.0F * Constants.PI);
 		final float textureV = 0.5F + asin(distanceY) / Constants.PI;
@@ -139,7 +143,7 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		
 //		Calculate the index of the RGB-value and fetch the RGB-value using said index:
 		final int textureIndex = textureY * textureWidth + textureX;
-		final int textureRGB = texture[textureIndex];
+		final int textureRGB = textures[textureOffset + Texture.RELATIVE_OFFSET_OF_TEXTURE_DATA + textureIndex];
 		
 //		Update the RGB-values of the pixels array:
 		pixels[pixelOffset + 0] += toR(textureRGB);

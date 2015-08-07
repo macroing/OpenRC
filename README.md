@@ -45,7 +45,6 @@ java -jar org.macroing.gdt.openrc.jar
 TODO
 ----
 This list contains some of the features and improvements that are likely to come in the future. The order of the list is not indicative of importance. It's the order I came to think about things to add.
-* Better texture management. Currently only one can be used.
 * Fix the shading algorithm to take into account occluding shapes.
 * Add texture mapping to planes and triangles.
 * Add vertex colors to triangles for shading with gradients.

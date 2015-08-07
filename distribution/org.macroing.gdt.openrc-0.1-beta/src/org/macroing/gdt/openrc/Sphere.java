@@ -25,7 +25,11 @@ final class Sphere extends Shape {
 	public static final int RELATIVE_OFFSET_OF_SPHERE_COLOR = 6;
 	public static final int RELATIVE_OFFSET_OF_SPHERE_POSITION = 2;
 	public static final int RELATIVE_OFFSET_OF_SPHERE_RADIUS = 5;
-	public static final int SIZE_OF_SPHERE = 1 + 1 + 3 + 1 + 3;
+	public static final int RELATIVE_OFFSET_OF_SPHERE_TEXTURE_COUNT = 9;
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	private static final int SIZE_OF_SPHERE = 1 + 1 + 3 + 1 + 3 + 1;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
@@ -33,13 +37,15 @@ final class Sphere extends Shape {
 	private final float g;
 	private final float r;
 	private final float radius;
+	private final float textureCount;
 	private final float x;
 	private final float y;
 	private final float z;
+	private final float[] textureOffsets;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	public Sphere(final float x, final float y, final float z, final float radius, final float r, final float g, final float b) {
+	public Sphere(final float x, final float y, final float z, final float radius, final float r, final float g, final float b, final float[] textureOffsets) {
 		this.x = x;
 		this.y = y;
 		this.z = z;
@@ -47,6 +53,8 @@ final class Sphere extends Shape {
 		this.r = r;
 		this.g = g;
 		this.b = b;
+		this.textureCount = textureOffsets.length;
+		this.textureOffsets = textureOffsets;
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -58,28 +66,35 @@ final class Sphere extends Shape {
 	
 	@Override
 	public float[] toFloatArray() {
-		return new float[] {
-			getType(),
-			size(),
-			this.x,
-			this.y,
-			this.z,
-			this.radius,
-			this.r,
-			this.g,
-			this.b
-		};
+		final float[] array = new float[size()];
+		
+		array[0] = getType();
+		array[1] = size();
+		array[2] = this.x;
+		array[3] = this.y;
+		array[4] = this.z;
+		array[5] = this.radius;
+		array[6] = this.r;
+		array[7] = this.g;
+		array[8] = this.b;
+		array[9] = this.textureCount;
+		
+		for(int i = 0; i < this.textureCount; i++) {
+			array[i + 10] = this.textureOffsets[i];
+		}
+		
+		return array;
 	}
 	
 	@Override
 	public int size() {
-		return SIZE_OF_SPHERE;
+		return SIZE_OF_SPHERE + (int)(this.textureCount);
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	public static Sphere random() {
-		return new Sphere(doRandom(4000.0F), 16.5F, doRandom(4000.0F), 16.5F, doRandom(255.0F), doRandom(255.0F), doRandom(255.0F));
+	public static Sphere random(final float... textureOffsets) {
+		return new Sphere(doRandom(4000.0F), 16.5F, doRandom(4000.0F), 16.5F, doRandom(255.0F), doRandom(255.0F), doRandom(255.0F), textureOffsets);
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////

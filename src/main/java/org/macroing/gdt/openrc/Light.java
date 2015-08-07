@@ -30,8 +30,8 @@ package org.macroing.gdt.openrc;
  * @author J&#246;rgen Lundgren
  */
 interface Light {
-	int RELATIVE_OFFSET_OF_LIGHT_TYPE = 0;
 	int RELATIVE_OFFSET_OF_LIGHT_SIZE = 1;
+	int RELATIVE_OFFSET_OF_LIGHT_TYPE = 0;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	

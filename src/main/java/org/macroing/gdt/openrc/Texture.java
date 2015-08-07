@@ -31,15 +31,27 @@ import java.io.UncheckedIOException;
 import javax.imageio.ImageIO;
 
 final class Texture {
+	public static final int RELATIVE_OFFSET_OF_TEXTURE_DATA = 4;
+	public static final int RELATIVE_OFFSET_OF_TEXTURE_HEIGHT = 3;
+	public static final int RELATIVE_OFFSET_OF_TEXTURE_SIZE = 1;
+	public static final int RELATIVE_OFFSET_OF_TEXTURE_TYPE = 0;
+	public static final int RELATIVE_OFFSET_OF_TEXTURE_WIDTH = 2;
+	public static final int TYPE_DECAL_TEXTURE = 2;
+	public static final int TYPE_SOLID_TEXTURE = 1;
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
 	private final int height;
+	private final int type;
 	private final int width;
 	private final int[] data;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	private Texture(final int width, final int height, final int[] data) {
+	private Texture(final int width, final int height, final int type, final int[] data) {
 		this.width = width;
 		this.height = height;
+		this.type = type;
 		this.data = data;
 	}
 	
@@ -49,36 +61,68 @@ final class Texture {
 		return this.height;
 	}
 	
+	public int getType() {
+		return this.type;
+	}
+	
 	public int getWidth() {
 		return this.width;
+	}
+	
+	public int size() {
+		return 1 + 1 + 1 + 1 + this.data.length;
 	}
 	
 	public int[] getData() {
 		return this.data;
 	}
 	
+	public int[] toIntArray() {
+		final int[] array = new int[size()];
+		
+		array[0] = getType();
+		array[1] = size();
+		array[2] = getWidth();
+		array[3] = getHeight();
+		
+		for(int i = 0; i < this.data.length; i++) {
+			array[i + 4] = this.data[i];
+		}
+		
+		return array;
+	}
+	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	public static Texture create() {
-		return new Texture(1, 1, new int[] {255});
+	public static Texture createDecalTexture() {
+		return new Texture(1, 1, TYPE_DECAL_TEXTURE, new int[] {255});
 	}
 	
-	public static Texture create(final InputStream inputStream) {
-		final BufferedImage bufferedImage = doCreateBufferedImageFrom(inputStream);
-		
-		final int width = bufferedImage.getWidth();
-		final int height = bufferedImage.getHeight();
-		
-		final int[] data = doGetDataFrom(bufferedImage);
-		
-		return new Texture(width, height, data);
+	public static Texture createDecalTexture(final InputStream inputStream) {
+		return doCreateTexture(TYPE_DECAL_TEXTURE, inputStream);
 	}
 	
-	public static Texture create(final String name) {
+	public static Texture createDecalTexture(final String name) {
 		try {
-			return create(Texture.class.getResourceAsStream(name));
+			return createDecalTexture(Texture.class.getResourceAsStream(name));
 		} catch(final Exception e) {
-			return Texture.create();
+			return Texture.createDecalTexture();
+		}
+	}
+	
+	public static Texture createSolidTexture() {
+		return new Texture(1, 1, TYPE_DECAL_TEXTURE, new int[] {255});
+	}
+	
+	public static Texture createSolidTexture(final InputStream inputStream) {
+		return doCreateTexture(TYPE_SOLID_TEXTURE, inputStream);
+	}
+	
+	public static Texture createSolidTexture(final String name) {
+		try {
+			return createSolidTexture(Texture.class.getResourceAsStream(name));
+		} catch(final Exception e) {
+			return Texture.createSolidTexture();
 		}
 	}
 	
@@ -115,5 +159,16 @@ final class Texture {
 		final int[] data = dataBufferInt.getData();
 		
 		return data;
+	}
+	
+	private static Texture doCreateTexture(final int type, final InputStream inputStream) {
+		final BufferedImage bufferedImage = doCreateBufferedImageFrom(inputStream);
+		
+		final int width = bufferedImage.getWidth();
+		final int height = bufferedImage.getHeight();
+		
+		final int[] data = doGetDataFrom(bufferedImage);
+		
+		return new Texture(width, height, type, data);
 	}
 }
