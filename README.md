@@ -2,6 +2,8 @@ OpenRC (v. 0.1-beta)
 ====================
 OpenRC is a simple Ray Caster implementation using OpenCL (via Aparapi).
 
+![alt text](https://github.com/macroing/OpenRC/blob/master/images/OpenRC_0.png "OpenRC")
+![alt text](https://github.com/macroing/OpenRC/blob/master/images/OpenRC_1.png "OpenRC")
 ![alt text](https://github.com/macroing/OpenRC/blob/master/images/OpenRC_2.png "OpenRC")
 
 This program is provided by Macroing.org.
