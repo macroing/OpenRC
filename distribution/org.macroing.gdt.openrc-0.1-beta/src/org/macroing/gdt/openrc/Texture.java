@@ -41,6 +41,10 @@ final class Texture {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+	private static final int SIZE_TEXTURE = 1 + 1 + 1 + 1;
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
 	private final int height;
 	private final int type;
 	private final int width;
@@ -70,7 +74,7 @@ final class Texture {
 	}
 	
 	public int size() {
-		return 1 + 1 + 1 + 1 + this.data.length;
+		return SIZE_TEXTURE + this.data.length;
 	}
 	
 	public int[] getData() {

@@ -27,22 +27,26 @@ import java.util.concurrent.atomic.AtomicInteger;
 final class Scene {
 	private final Camera camera;
 	private final float[] lightsAsArray;
+	private final float[] materialsAsArray;
 	private final float[] shapesAsArray;
 	private final int[] shapeIndices;
 	private final int[] texturesAsArray;
 	private final List<Light> lightsAsList;
+	private final List<Material> materialsAsList;
 	private final List<Shape> shapesAsList;
 	private final List<Texture> texturesAsList;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	Scene(final Camera camera, final float[] lightsAsArray, final float[] shapesAsArray, final int[] shapeIndices, final int[] texturesAsArray, final List<Light> lightsAsList, final List<Shape> shapesAsList, final List<Texture> texturesAsList) {
+	Scene(final Camera camera, final float[] lightsAsArray, final float[] materialsAsArray, final float[] shapesAsArray, final int[] shapeIndices, final int[] texturesAsArray, final List<Light> lightsAsList, final List<Material> materialsAsList, final List<Shape> shapesAsList, final List<Texture> texturesAsList) {
 		this.camera = camera;
 		this.lightsAsArray = lightsAsArray;
+		this.materialsAsArray = materialsAsArray;
 		this.shapesAsArray = shapesAsArray;
 		this.shapeIndices = shapeIndices;
 		this.texturesAsArray = texturesAsArray;
 		this.lightsAsList = lightsAsList;
+		this.materialsAsList = materialsAsList;
 		this.shapesAsList = shapesAsList;
 		this.texturesAsList = texturesAsList;
 	}
@@ -55,6 +59,10 @@ final class Scene {
 	
 	public float[] getLightsAsArray() {
 		return this.lightsAsArray;
+	}
+	
+	public float[] getMaterialsAsArray() {
+		return this.materialsAsArray;
 	}
 	
 	public float[] getShapesAsArray() {
@@ -81,6 +89,10 @@ final class Scene {
 		return this.lightsAsList;
 	}
 	
+	public List<Material> getMaterialsAsList() {
+		return this.materialsAsList;
+	}
+	
 	public List<Shape> getShapesAsList() {
 		return this.shapesAsList;
 	}
@@ -99,19 +111,30 @@ final class Scene {
 		builder.addTexture(Texture.createSolidTexture("Texture_2.png"));
 		builder.addTexture(Texture.createSolidTexture("Texture_3.png"));
 		builder.addTexture(Texture.createDecalTexture("Texture_4.png"));
+		
+		final int[] textureOffsets = builder.calculateTextureOffsets();
+		
+//		builder.addMaterial(Material.blackPlastic().setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.blue().setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.brass().setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.green().setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.obsidian().setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.red().setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(new Material().setAmbientColor(0.0F, 0.0F, 0.0F).setDiffuseColor(0.0F, 0.0F, 0.0F).setSpecularColor(1.0F, 1.0F, 1.0F).setSpecularPower(32.0F).setTextureOffsets(0));
+		
 		builder.addLight(new PointLight(400.0F, 20.0F, 400.0F, 100.0F));
 		builder.addLight(new PointLight(600.0F, 20.0F, 600.0F, 100.0F));
 		builder.addLight(new PointLight(600.0F, 20.0F, 400.0F, 100.0F));
 		builder.addLight(new PointLight(400.0F, 20.0F, 600.0F, 100.0F));
 		
-		final int[] textureOffsets = builder.calculateTextureOffsets();
+		final float[] materialOffsets = builder.calculateMaterialOffsets();
 		
-		for(int i = 0; i < 500; i++) {
-			builder.addShape(Sphere.random(textureOffsets[doRandom(textureOffsets.length - 1)], textureOffsets[4]));
+		for(int i = 0; i < 100; i++) {
+			builder.addShape(Sphere.random(materialOffsets[doRandom(materialOffsets.length)]));
 		}
 		
-		builder.addShape(new Plane(1.0F, 0.0F, 0.0F));
-		builder.addShape(new Triangle(2500.0F, 40.0F, 2500.0F, 1000.0F, 40.0F, 1500.0F, -1000.0F, 40.0F, -1000.0F));
+		builder.addShape(new Plane(materialOffsets[doRandom(materialOffsets.length)], 1.0F, 0.0F, 0.0F));
+		builder.addShape(new Triangle(materialOffsets[doRandom(materialOffsets.length)], 2500.0F, 40.0F, 2500.0F, 1000.0F, 40.0F, 1500.0F, -1000.0F, 40.0F, -1000.0F));
 		
 		return builder.build();
 	}
@@ -122,6 +145,7 @@ final class Scene {
 		private final AtomicInteger index = new AtomicInteger();
 		private final Camera camera = new Camera();
 		private final List<Light> lights = new ArrayList<>();
+		private final List<Material> materials = new ArrayList<>();
 		private final List<Shape> shapes = new ArrayList<>();
 		private final List<Texture> textures = new ArrayList<>();
 		
@@ -135,6 +159,12 @@ final class Scene {
 		
 		public Builder addLight(final Light light) {
 			this.lights.add(Objects.requireNonNull(light, "light == null"));
+			
+			return this;
+		}
+		
+		public Builder addMaterial(final Material material) {
+			this.materials.add(Objects.requireNonNull(material, "material == null"));
 			
 			return this;
 		}
@@ -153,6 +183,19 @@ final class Scene {
 			return this;
 		}
 		
+		public float[] calculateMaterialOffsets() {
+			final float[] materialOffsets = new float[this.materials.size()];
+			final float[] materials = doCreateMaterials();
+			
+			for(int i = 0, j = 0; i < this.materials.size() && j < materials.length; i++) {
+				materialOffsets[i] = j;
+				
+				j += materials[j + Material.RELATIVE_OFFSET_OF_SIZE];
+			}
+			
+			return materialOffsets;
+		}
+		
 		public int[] calculateTextureOffsets() {
 			final int[] textureOffsets = new int[this.textures.size()];
 			final int[] textures = doCreateTextures();
@@ -167,7 +210,7 @@ final class Scene {
 		}
 		
 		public Scene build() {
-			return new Scene(this.camera, doCreateLights(), doCreateShapes(), doCreateShapeIndices(), doCreateTextures(), this.lights, this.shapes, this.textures);
+			return new Scene(this.camera, doCreateLights(), doCreateMaterials(), doCreateShapes(), doCreateShapeIndices(), doCreateTextures(), this.lights, this.materials, this.shapes, this.textures);
 		}
 		
 		////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -184,6 +227,27 @@ final class Scene {
 			
 			for(final Light light : this.lights) {
 				final float[] array1 = light.toFloatArray();
+				
+				System.arraycopy(array1, 0, array0, offset, array1.length);
+				
+				offset += array1.length;
+			}
+			
+			return array0;
+		}
+		
+		private float[] doCreateMaterials() {
+			int length = 0;
+			int offset = 0;
+			
+			for(final Material material : this.materials) {
+				length += material.size();
+			}
+			
+			final float[] array0 = new float[length];
+			
+			for(final Material material : this.materials) {
+				final float[] array1 = material.toFloatArray();
 				
 				System.arraycopy(array1, 0, array0, offset, array1.length);
 				

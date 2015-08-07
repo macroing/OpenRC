@@ -25,7 +25,7 @@ final class Constants {
 	public static final int HEIGHT = 768;
 	public static final int RELATIVE_OFFSET_OF_RAY_DIRECTION = 3;
 	public static final int RELATIVE_OFFSET_OF_RAY_ORIGIN = 0;
-	public static final int SIZE_OF_PIXEL = 1 + 1 + 1;
+	public static final int SIZE_OF_PIXEL = 3 + 3;
 	public static final int SIZE_OF_RAY = 3 + 3;
 	public static final int WIDTH = 1024;
 	

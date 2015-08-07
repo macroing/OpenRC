@@ -23,27 +23,34 @@ package org.macroing.gdt.openrc;
  * <ol>
  * <li>Type</li>
  * <li>Size</li>
- * <li>Data[Size - 2]</li>
+ * <li>MaterialOffset</li>
+ * <li>Data[Size - 3]</li>
  * </ol>
  * 
  * @since 1.0.0
  * @author J&#246;rgen Lundgren
  */
 abstract class Shape {
+	public static final int RELATIVE_OFFSET_OF_SHAPE_MATERIAL_OFFSET = 2;
 	public static final int RELATIVE_OFFSET_OF_SHAPE_SIZE = 1;
 	public static final int RELATIVE_OFFSET_OF_SHAPE_TYPE = 0;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+	private final float materialOffset;
 	private int index;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	protected Shape() {
-		
+	protected Shape(final float materialOffset) {
+		this.materialOffset = materialOffset;
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	public final float getMaterialOffset() {
+		return this.materialOffset;
+	}
 	
 	public abstract float getType();
 	

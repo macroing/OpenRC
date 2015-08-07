@@ -109,7 +109,7 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		vector[offset + 2] *= lengthReciprocal;
 	}
 	
-	public void performSphericalTextureMapping(final float[] intersections, final float[] pixels, final float[] shapes, final int intersectionOffset, final int pixelOffset, final int shapeOffset, final int textureOffset, final int[] textures) {
+	public void performSphericalTextureMapping(final float[] intersections, final float[] materials, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int textureOffset, final int[] textures) {
 //		Initialize the variables with the position (the X-, Y- and Z-values) of the sphere:
 		final float sphereX = shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_SPHERE_POSITION + 0];
 		final float sphereY = shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_SPHERE_POSITION + 1];
@@ -162,9 +162,9 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		}
 		
 //		Update the RGB-values of the pixels array:
-		pixels[pixelOffset + 0] += r;
-		pixels[pixelOffset + 1] += g;
-		pixels[pixelOffset + 2] += b;
+		pixels[pixelOffset + 3] += r;
+		pixels[pixelOffset + 4] += g;
+		pixels[pixelOffset + 5] += b;
 	}
 	
 	public void updateSurfaceNormalForSphere(final float[] intersections, final float[] shapes, final int intersectionOffset, final int shapeOffset) {
@@ -200,12 +200,6 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL + 0] = surfaceNormalX;
 		intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL + 1] = surfaceNormalY;
 		intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL + 2] = surfaceNormalZ;
-	}
-	
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	
-	public static float dotProduct(final float[] vector0, final int offset0, final float[] vector1, final int offset1) {
-		return vector0[offset0] * vector1[offset1] + vector0[offset0 + 1] * vector1[offset1 + 1] + vector0[offset0 + 2] * vector1[offset1 + 2];
 	}
 	
 	public float findIntersection(final float[] intersections, final float[] rays, final float[] shapes, final int shapeIndicesLength, final int[] shapeIndices) {
@@ -287,6 +281,212 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		}
 		
 		return shapeClosestDistance;
+	}
+	
+	public void attemptToAddDiffuseReflectionFromPointLight(final float shade, final float[] intersections, final float[] lights, final float[] materials, final float[] pixels, final float[] shapes, final int intersectionOffset, final int lightOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int[] textures) {
+//		Get the diffuse intensity:
+		final float diffuseIntensity = materials[materialOffset + Material.RELATIVE_OFFSET_OF_DIFFUSE_INTENSITY];
+		
+		if(diffuseIntensity > 0.0F) {
+//			Get the RGB-components for the diffuse color:
+			final float diffuseColorR = materials[materialOffset + Material.RELATIVE_OFFSET_OF_DIFFUSE_COLOR + 0];
+			final float diffuseColorG = materials[materialOffset + Material.RELATIVE_OFFSET_OF_DIFFUSE_COLOR + 1];
+			final float diffuseColorB = materials[materialOffset + Material.RELATIVE_OFFSET_OF_DIFFUSE_COLOR + 2];
+			
+//			Get the location from the point light:
+			final float pointLightX = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION + 0];
+			final float pointLightY = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION + 1];
+			final float pointLightZ = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION + 2];
+			
+//			Get the surface intersection point:
+			final float surfaceIntersectionX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT + 0];
+			final float surfaceIntersectionY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT + 1];
+			final float surfaceIntersectionZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT + 2];
+			
+//			Get the surface normal on the surface intersection point:
+			final float surfaceNormalX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL + 0];
+			final float surfaceNormalY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL + 1];
+			final float surfaceNormalZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL + 2];
+			
+//			Calculate the direction from the surface intersection point of the shape and the location of the point light:
+			float directionX = pointLightX - surfaceIntersectionX;
+			float directionY = pointLightY - surfaceIntersectionY;
+			float directionZ = pointLightZ - surfaceIntersectionZ;
+			
+//			Calculate the length reciprocal of the direction vector:
+			final float lengthReciprocal = 1.0F / sqrt(directionX * directionX + directionY * directionY + directionZ * directionZ);
+			
+//			Multiply the direction with the reciprocal of the length to normalize it:
+			directionX *= lengthReciprocal;
+			directionY *= lengthReciprocal;
+			directionZ *= lengthReciprocal;
+			
+//			Calculate the dot product as the dot product of the direction and the surface normal, or 0.0 if less than that:
+			final float dotProduct = max(directionX * surfaceNormalX + directionY * surfaceNormalY + directionZ * surfaceNormalZ, 0.0F);
+			
+//			Calculate the diffuse component as the dot product multiplied with the diffuse intensity multiplied by the shade:
+			final float diffuseComponent = dotProduct * diffuseIntensity * shade;
+			
+//			Reset the temporary pixel buffer:
+			pixels[pixelOffset + 3] = 0.0F;
+			pixels[pixelOffset + 4] = 0.0F;
+			pixels[pixelOffset + 5] = 0.0F;
+			
+			if(shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_TYPE] == Sphere.TYPE_SPHERE) {
+//				Initialize the texture count:
+				final int textureCount = (int)(materials[materialOffset + Material.RELATIVE_OFFSET_OF_TEXTURE_COUNT]);
+				
+				for(int i = 0; i < textureCount; i++) {
+//					Initialize the texture offset:
+					final int textureOffset = (int)(materials[materialOffset + Material.RELATIVE_OFFSET_OF_TEXTURE_COUNT + i + 1]);
+					
+//					Perform spherical texture mapping on the sphere:
+					performSphericalTextureMapping(intersections, materials, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textureOffset, textures);
+				}
+			}
+			
+//			Add the RGB-components of the diffuse color multiplied by the diffuse component, to the pixel:
+			pixels[pixelOffset + 0] += (diffuseColorR + pixels[pixelOffset + 3]) * diffuseComponent;
+			pixels[pixelOffset + 1] += (diffuseColorG + pixels[pixelOffset + 4]) * diffuseComponent;
+			pixels[pixelOffset + 2] += (diffuseColorB + pixels[pixelOffset + 5]) * diffuseComponent;
+		}
+	}
+	
+	public void attemptToAddDirectLight(final float[] intersections, final float[] lights, final float[] materials, final float[] pixels, final float[] shapes, final int intersectionOffset, final int lightsLength, final int materialOffset, final int pixelOffset, final int shapeOffset, final int[] textures) {
+		for(int i = 0, j = 0; i < lightsLength; i += j) {
+//			Initialize the temporary type and size variables of the current light:
+			final float lightType = lights[i + Light.RELATIVE_OFFSET_OF_LIGHT_TYPE];
+			final float lightSize = lights[i + Light.RELATIVE_OFFSET_OF_LIGHT_SIZE];
+			
+//			Set the light size as increment for the next loop iteration:
+			j = (int)(lightSize);
+			
+			if(lightType == PointLight.TYPE_POINT_LIGHT) {
+//				TODO: Fix the shade calculation, such that occluding shapes are taken into account:
+				final float shade = 1.0F;
+				
+				if(shade > 0.0F) {
+					attemptToAddDiffuseReflectionFromPointLight(shade, intersections, lights, materials, pixels, shapes, intersectionOffset, i, materialOffset, pixelOffset, shapeOffset, textures);
+					attemptToAddSpecularReflectionFromPointLight(shade, intersections, lights, materials, pixels, intersectionOffset, i, materialOffset, pixelOffset);
+				}
+			}
+		}
+	}
+	
+	public void attemptToAddSpecularReflectionFromPointLight(final float shade, final float[] intersections, final float[] lights, final float[] materials, final float[] pixels, final int intersectionOffset, final int lightOffset, final int materialOffset, final int pixelOffset) {
+//		Get the specular intensity:
+		final float specularIntensity = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_INTENSITY];
+		
+		if(specularIntensity > 0.0F) {
+//			Get the RGB-components for the specular color:
+			final float specularColorR = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_COLOR + 0];
+			final float specularColorG = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_COLOR + 1];
+			final float specularColorB = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_COLOR + 2];
+			
+//			Get the location from the point light:
+			final float pointLightX = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION + 0];
+			final float pointLightY = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION + 1];
+			final float pointLightZ = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION + 2];
+			
+//			Get the surface intersection point:
+			final float surfaceIntersectionX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT + 0];
+			final float surfaceIntersectionY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT + 1];
+			final float surfaceIntersectionZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT + 2];
+			
+//			Get the surface normal on the surface intersection point:
+			float surfaceNormalX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL + 0];
+			float surfaceNormalY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL + 1];
+			float surfaceNormalZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL + 2];
+			
+//			Calculate the direction from the surface intersection point of the shape and the location of the point light:
+			float directionX = pointLightX - surfaceIntersectionX;
+			float directionY = pointLightY - surfaceIntersectionY;
+			float directionZ = pointLightZ - surfaceIntersectionZ;
+			
+//			Calculate the length reciprocal of the direction vector:
+			float lengthReciprocal = 1.0F / sqrt(directionX * directionX + directionY * directionY + directionZ * directionZ);
+			
+//			Multiply the direction with the reciprocal of the length to normalize it:
+			directionX *= lengthReciprocal;
+			directionY *= lengthReciprocal;
+			directionZ *= lengthReciprocal;
+			
+//			Calculate the dot product as the negative dot product of the direction and the surface normal:
+			float dotProduct = -(directionX * surfaceNormalX + directionY * surfaceNormalY + directionZ * surfaceNormalZ);
+			
+			if(dotProduct > 0.0F) {
+//				Calculate the dot product multiplied by 2:
+				final float dotProductMultipliedByTwo = dotProduct * 2.0F;
+				
+//				Multiply the surface normal with the dot product multiplied by 2:
+				surfaceNormalX *= dotProductMultipliedByTwo;
+				surfaceNormalY *= dotProductMultipliedByTwo;
+				surfaceNormalZ *= dotProductMultipliedByTwo;
+				
+//				Add the direction to the surface normal:
+				surfaceNormalX += directionX;
+				surfaceNormalY += directionY;
+				surfaceNormalZ += directionZ;
+				
+//				Calculate the length reciprocal of the surface normal vector:
+				lengthReciprocal = 1.0F / sqrt(surfaceNormalX * surfaceNormalX + surfaceNormalY * surfaceNormalY + surfaceNormalZ * surfaceNormalZ);
+				
+//				Multiply the surface normal with the reciprocal of the length to normalize it:
+				surfaceNormalX *= lengthReciprocal;
+				surfaceNormalY *= lengthReciprocal;
+				surfaceNormalZ *= lengthReciprocal;
+				
+//				Calculate the dot product as the negative dot product of the direction and the surface normal:
+				dotProduct = -(directionX * surfaceNormalX + directionY * surfaceNormalY + directionZ * surfaceNormalZ);
+				
+//				Initialize some minimum and maximum values:
+				final float minimumValue = 0.0F;
+				final float maximumValue = max(dotProduct, minimumValue);
+				
+//				Get the specular power and calculate the specular component:
+				final float specularPower = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_POWER];
+				final float specularComponent = pow(maximumValue, specularPower) * specularIntensity * shade;
+				
+//				Add the RGB-components of the specular color multiplied by the specular component, to the pixel:
+				pixels[pixelOffset + 0] += specularColorR * specularComponent;
+				pixels[pixelOffset + 1] += specularColorG * specularComponent;
+				pixels[pixelOffset + 2] += specularColorB * specularComponent;
+			}
+		}
+	}
+	
+	public void updatePixel(final float[] pixels, final int pixelOffset, final int rGBOffset, final int[] rGB) {
+//		Get the RGB-values from the current pixel:
+		float r = pixels[pixelOffset + 0];
+		float g = pixels[pixelOffset + 1];
+		float b = pixels[pixelOffset + 2];
+		
+//		Calculate the maximum component value (used in Tone Mapping):
+		final float maximumComponentValue = max(r, max(g, b));
+		
+		if(maximumComponentValue > 1.0F) {
+//			Calculate the reciprocal of the maximum component value:
+			final float maximumComponentValueReciprocal = 1.0F / maximumComponentValue;
+			
+//			Perform the Tone Mapping:
+			r *= maximumComponentValueReciprocal;
+			g *= maximumComponentValueReciprocal;
+			b *= maximumComponentValueReciprocal;
+		}
+		
+//		Scale the color from [0-1) to [0-256):
+		final int scaledR = (int)(r * 255.0F);
+		final int scaledG = (int)(g * 255.0F);
+		final int scaledB = (int)(b * 255.0F);
+		
+//		Set the RGB-value of the current pixel:
+		rGB[rGBOffset] = toRGB(scaledR, scaledG, scaledB);
+	}
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	public static float dotProduct(final float[] vector0, final int offset0, final float[] vector1, final int offset1) {
+		return vector0[offset0] * vector1[offset1] + vector0[offset0 + 1] * vector1[offset1 + 1] + vector0[offset0 + 2] * vector1[offset1 + 2];
 	}
 	
 	public static float findIntersectionForTriangle(final float rayOriginX, final float rayOriginY, final float rayOriginZ, final float rayDirectionX, final float rayDirectionY, final float rayDirectionZ, final float[] shapes, final int shapeOffset) {
@@ -375,6 +575,32 @@ abstract class AbstractRayCasterKernel extends Kernel {
 	
 	public static int toRGB(final int r, final int g, final int b) {
 		return ((r & 0xFF) << 16) | ((g & 0xFF) << 8) | ((b & 0xFF) << 0);
+	}
+	
+	public static void attemptToAddAmbientLight(final float[] materials, final float[] pixels, final int materialOffset, final int pixelOffset) {
+//		Get the ambient intensity:
+		final float ambientIntensity = materials[materialOffset + Material.RELATIVE_OFFSET_OF_AMBIENT_INTENSITY];
+		
+		if(ambientIntensity > 0.0F) {
+//			Get the RGB-components for the ambient color:
+			final float ambientColorR = materials[materialOffset + Material.RELATIVE_OFFSET_OF_AMBIENT_COLOR + 0];
+			final float ambientColorG = materials[materialOffset + Material.RELATIVE_OFFSET_OF_AMBIENT_COLOR + 1];
+			final float ambientColorB = materials[materialOffset + Material.RELATIVE_OFFSET_OF_AMBIENT_COLOR + 2];
+			
+//			Add the RGB-components of the ambient color multiplied by the ambient intensity, to the pixel:
+			pixels[pixelOffset + 0] += ambientColorR * ambientIntensity;
+			pixels[pixelOffset + 1] += ambientColorG * ambientIntensity;
+			pixels[pixelOffset + 2] += ambientColorB * ambientIntensity;
+		}
+	}
+	
+	public static void clearPixel(final float[] pixels, final int pixelOffset) {
+		pixels[pixelOffset + 0] = 0.0F;
+		pixels[pixelOffset + 1] = 0.0F;
+		pixels[pixelOffset + 2] = 0.0F;
+		pixels[pixelOffset + 3] = 0.0F;
+		pixels[pixelOffset + 4] = 0.0F;
+		pixels[pixelOffset + 5] = 0.0F;
 	}
 	
 	public static void updateSurfaceNormalForPlane(final float[] intersections, final float[] shapes, final int intersectionOffset, final int shapeOffset) {

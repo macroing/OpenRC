@@ -62,7 +62,7 @@
 		<delete file="${repository.file}"/>
 	</target>
 	
-	<target name="initialize" description="Creates needed directories for project ${project.name}.">
+	<target name="initialize" depends="clean" description="Creates needed directories for project ${project.name}.">
 		<mkdir dir="${project.build.main.directory}"/>
 		<mkdir dir="${project.build.test.directory}"/>
 		<mkdir dir="${project.documentation.data.directory}"/>

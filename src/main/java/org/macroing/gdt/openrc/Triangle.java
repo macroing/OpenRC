@@ -20,11 +20,11 @@ package org.macroing.gdt.openrc;
 
 final class Triangle extends Shape {
 	public static final float TYPE_TRIANGLE = 3.0F;
-	public static final int RELATIVE_OFFSET_OF_TRIANGLE_A = 2;
-	public static final int RELATIVE_OFFSET_OF_TRIANGLE_B = 5;
-	public static final int RELATIVE_OFFSET_OF_TRIANGLE_C = 8;
-	public static final int RELATIVE_OFFSET_OF_TRIANGLE_SURFACE_NORMAL = 11;
-	public static final int SIZE_OF_TRIANGLE = 1 + 1 + 3 + 3 + 3 + 3;
+	public static final int RELATIVE_OFFSET_OF_TRIANGLE_A = 3;
+	public static final int RELATIVE_OFFSET_OF_TRIANGLE_B = 6;
+	public static final int RELATIVE_OFFSET_OF_TRIANGLE_C = 9;
+	public static final int RELATIVE_OFFSET_OF_TRIANGLE_SURFACE_NORMAL = 12;
+	public static final int SIZE_OF_TRIANGLE = 1 + 1 + 1 + 3 + 3 + 3 + 3;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
@@ -43,7 +43,9 @@ final class Triangle extends Shape {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	public Triangle(final float aX, final float aY, final float aZ, final float bX, final float bY, final float bZ, final float cX, final float cY, final float cZ) {
+	public Triangle(final float materialOffset, final float aX, final float aY, final float aZ, final float bX, final float bY, final float bZ, final float cX, final float cY, final float cZ) {
+		super(materialOffset);
+		
 		final float[] surfaceNormal = doToSurfaceNormal(aX, aY, aZ, bX, bY, bZ, cX, cY, cZ);
 		
 		this.aX = aX;
@@ -72,6 +74,7 @@ final class Triangle extends Shape {
 		return new float[] {
 			getType(),
 			size(),
+			getMaterialOffset(),
 			this.aX,
 			this.aY,
 			this.aZ,

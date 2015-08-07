@@ -20,8 +20,8 @@ package org.macroing.gdt.openrc;
 
 final class Plane extends Shape {
 	public static final float TYPE_PLANE = 2.0F;
-	public static final int RELATIVE_OFFSET_OF_PLANE_SURFACE_NORMAL = 2;
-	public static final int SIZE_OF_PLANE = 1 + 1 + 3;
+	public static final int RELATIVE_OFFSET_OF_PLANE_SURFACE_NORMAL = 3;
+	public static final int SIZE_OF_PLANE = 1 + 1 + 1 + 3;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
@@ -31,7 +31,9 @@ final class Plane extends Shape {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	public Plane(final float surfaceNormalX, final float surfaceNormalY, final float surfaceNormalZ) {
+	public Plane(final float materialOffset, final float surfaceNormalX, final float surfaceNormalY, final float surfaceNormalZ) {
+		super(materialOffset);
+		
 		this.surfaceNormalX = surfaceNormalX;
 		this.surfaceNormalY = surfaceNormalY;
 		this.surfaceNormalZ = surfaceNormalZ;
@@ -49,6 +51,7 @@ final class Plane extends Shape {
 		return new float[] {
 			getType(),
 			size(),
+			getMaterialOffset(),
 			this.surfaceNormalX,
 			this.surfaceNormalY,
 			this.surfaceNormalZ

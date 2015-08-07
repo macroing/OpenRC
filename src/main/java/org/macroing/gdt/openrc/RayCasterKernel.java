@@ -36,6 +36,7 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 	private final float[] camera;
 	private final float[] intersections;
 	private final float[] lights;
+	private final float[] materials;
 	private final float[] pixels;
 	private final float[] rays;
 	private final float[] shapes;
@@ -53,6 +54,7 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		this.camera = scene.getCamera().getArray();
 		this.intersections = Intersection.create(Constants.WIDTH * Constants.HEIGHT);
 		this.lights = scene.getLightsAsArray();
+		this.materials = scene.getMaterialsAsArray();
 		this.pixels = new float[Constants.WIDTH * Constants.HEIGHT * Constants.SIZE_OF_PIXEL];
 		this.rays = new float[Constants.WIDTH * Constants.HEIGHT * Constants.SIZE_OF_RAY];
 		this.shapes = scene.getShapesAsArray();
@@ -70,6 +72,7 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 //		Tell the API to fetch the below arrays and their values before executing this Kernel instance (they will be transferred to the GPU):
 		put(this.intersections);
 		put(this.lights);
+		put(this.materials);
 		put(this.rays);
 		put(this.shapes);
 		put(this.rGB);
@@ -106,155 +109,21 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 //		Calculate the distance to the closest shape, if any:
 		final float distance = findIntersection(this.intersections, this.rays, this.shapes, this.shapeIndicesLength, this.shapeIndices);
 		
-//		Initialize the RGB-values of the current pixel to black:
-		float r = 0.0F;
-		float g = 0.0F;
-		float b = 0.0F;
-		
-		this.pixels[pixelOffset + 0] = r;
-		this.pixels[pixelOffset + 1] = g;
-		this.pixels[pixelOffset + 2] = b;
+//		Update the pixels with the RGB-values reset to black:
+		clearPixel(this.pixels, pixelOffset);
 		
 		if(distance > 0.0F && distance < Constants.MAXIMUM_DISTANCE) {
 //			Initialize needed offset values:
 			final int intersectionOffset = index * Intersection.SIZE_OF_INTERSECTION;
 			final int shapeOffset = (int)(this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET]);
+			final int materialOffset = (int)(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_MATERIAL_OFFSET]);
 			
-//			Calculate the shading for the intersected shape at the surface intersection point:
-			final float shading = doCalculateShading(intersectionOffset, pixelOffset, shapeOffset);
-			
-			if(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_TYPE] == Plane.TYPE_PLANE) {
-//				A temporary way to give the plane some color:
-				this.pixels[pixelOffset + 0] = 1.0F;
-				this.pixels[pixelOffset + 1] = 1.0F;
-				this.pixels[pixelOffset + 2] = 0.0F;
-			}
-			
-			if(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_TYPE] == Sphere.TYPE_SPHERE) {
-//				Initialize the texture count:
-				final int textureCount = (int)(this.shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_SPHERE_TEXTURE_COUNT]);
-				
-				for(int i = 0; i < textureCount; i++) {
-//					Initialize the texture offset:
-					final int textureOffset = (int)(this.shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_SPHERE_TEXTURE_COUNT + i + 1]);
-					
-//					Perform spherical texture mapping on the sphere:
-					performSphericalTextureMapping(this.intersections, this.pixels, this.shapes, intersectionOffset, pixelOffset, shapeOffset, textureOffset, this.textures);
-				}
-			}
-			
-			if(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_TYPE] == Triangle.TYPE_TRIANGLE) {
-//				A temporary way to give the triangle some color:
-				this.pixels[pixelOffset + 0] = 0.0F;
-				this.pixels[pixelOffset + 1] = 1.0F;
-				this.pixels[pixelOffset + 2] = 0.0F;
-			}
-			
-//			Update the RGB-values of the current pixel, given the RGB-values of the intersected shape:
-			r = this.pixels[pixelOffset + 0] * shading;
-			g = this.pixels[pixelOffset + 1] * shading;
-			b = this.pixels[pixelOffset + 2] * shading;
+//			Calculate the ambient and direct light:
+			attemptToAddAmbientLight(this.materials, this.pixels, materialOffset, pixelOffset);
+			attemptToAddDirectLight(this.intersections, this.lights, this.materials, this.pixels, this.shapes, intersectionOffset, this.lightsLength, materialOffset, pixelOffset, shapeOffset, this.textures);
 		}
 		
-//		Calculate the maximum component value (used in Tone Mapping):
-		final float maximumComponentValue = max(r, max(g, b));
-		
-		if(maximumComponentValue > 1.0F) {
-//			Calculate the reciprocal of the maximum component value:
-			final float maximumComponentValueReciprocal = 1.0F / maximumComponentValue;
-			
-//			Perform the Tone Mapping:
-			r *= maximumComponentValueReciprocal;
-			g *= maximumComponentValueReciprocal;
-			b *= maximumComponentValueReciprocal;
-		}
-		
-//		Set the RGB-value of the current pixel:
-		this.rGB[index] = toRGB((int)(r * 255.0F), (int)(g * 255.0F), (int)(b * 255.0F));
-	}
-	
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	
-	@SuppressWarnings("unused")
-	private float doCalculateShading(final int intersectionOffset, final int pixelOffset, final int shapeOffset) {
-//		Initialize the shading value:
-		float shading = 0.0F;
-		
-//		Initialize values from the intersection:
-		final float surfaceIntersectionX = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT + 0];
-		final float surfaceIntersectionY = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT + 1];
-		final float surfaceIntersectionZ = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_INTERSECTION_POINT + 2];
-		final float surfaceNormalX = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL + 0];
-		final float surfaceNormalY = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL + 1];
-		final float surfaceNormalZ = this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL + 2];
-		
-		for(int i = 0, j = 0; i < this.lightsLength; i += j) {
-//			Initialize the temporary type and size variables of the current light:
-			final float lightType = this.lights[i + Light.RELATIVE_OFFSET_OF_LIGHT_TYPE];
-			final float lightSize = this.lights[i + Light.RELATIVE_OFFSET_OF_LIGHT_SIZE];
-			
-//			Set the light size as increment for the next loop iteration:
-			j = (int)(lightSize);
-			
-			if(lightType == PointLight.TYPE_POINT_LIGHT) {
-//				Initialize the temporary X-, Y-, Z- and distance falloff variables of the current point light:
-				final float pointLightX = this.lights[i + PointLight.RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION + 0];
-				final float pointLightY = this.lights[i + PointLight.RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION + 1];
-				final float pointLightZ = this.lights[i + PointLight.RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION + 2];
-				final float pointLightDistanceFalloff = this.lights[i + PointLight.RELATIVE_OFFSET_OF_POINT_LIGHT_DISTANCE_FALLOFF];
-				
-//				Calculate the delta values between the current light and the surface intersection point of the shape:
-				float dx = pointLightX - surfaceIntersectionX;
-				float dy = pointLightY - surfaceIntersectionY;
-				float dz = pointLightZ - surfaceIntersectionZ;
-				
-//				Calculate the length reciprocal of the vector produced by the delta values:
-				final float lengthReciprocal = 1.0F / sqrt(dx * dx + dy * dy + dz * dz);
-				
-//				Multiply the delta values with the length reciprocal to normalize it:
-				dx *= lengthReciprocal;
-				dy *= lengthReciprocal;
-				dz *= lengthReciprocal;
-				
-				final float dotProduct = dx * surfaceNormalX + dy * surfaceNormalY + dz * surfaceNormalZ;
-				final float dotProductNegative = -dotProduct;
-				
-//				Calculate the shading as the maximum value of 0.0 and the dot product of the delta vector and the surface normal vector, then add it to the shading variable:
-				shading += dotProduct;
-				
-//				TODO: Fix this specular calculation:
-				if(dotProductNegative > 0.0F) {
-					final float dotProductNegativeTimes2 = dotProductNegative * 2.0F;
-					
-					float surfaceNormal0X = surfaceNormalX * dotProductNegativeTimes2 + dx;
-					float surfaceNormal0Y = surfaceNormalY * dotProductNegativeTimes2 + dy;
-					float surfaceNormal0Z = surfaceNormalZ * dotProductNegativeTimes2 + dz;
-					
-					final float surfaceNormal0LengthReciprocal = 1.0F / sqrt(surfaceNormal0X * surfaceNormal0X + surfaceNormal0Y * surfaceNormal0Y + surfaceNormal0Z * surfaceNormal0Z);
-					
-					surfaceNormal0X *= surfaceNormal0LengthReciprocal;
-					surfaceNormal0Y *= surfaceNormal0LengthReciprocal;
-					surfaceNormal0Z *= surfaceNormal0LengthReciprocal;
-					
-					final float negativeDotProduct = -(dx * surfaceNormal0X + dy * surfaceNormal0Y + dz * surfaceNormal0Z);
-					final float minimumValue = 0.0F;
-					final float maximumValue = max(negativeDotProduct, minimumValue);
-					final float specularPower = 32.0F;
-					final float specular = pow(maximumValue, specularPower);
-					
-					this.pixels[pixelOffset + 0] += 1.0F * specular;
-					this.pixels[pixelOffset + 1] += 1.0F * specular;
-					this.pixels[pixelOffset + 2] += 1.0F * specular;
-				}
-			}
-		}
-		
-//		Set the ambient shading value to use as a minimum:
-		final float ambientShading = 0.1F;
-		
-//		Update the shading variable to be between ambientShading and 1.0:
-		shading = max(min(shading, 1.0F), ambientShading);
-		
-		return shading;
+//		Update the pixel by performing gamma correction, tone mapping and scaling:
+		updatePixel(this.pixels, pixelOffset, index, this.rGB);
 	}
 }

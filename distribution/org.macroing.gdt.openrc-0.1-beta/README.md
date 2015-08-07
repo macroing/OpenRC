@@ -2,7 +2,7 @@ OpenRC (v. 0.1-beta)
 ====================
 OpenRC is a simple Ray Caster implementation using OpenCL (via Aparapi).
 
-![alt text](https://github.com/macroing/OpenRC/blob/master/images/OpenRC_0.png "OpenRC")
+![alt text](https://github.com/macroing/OpenRC/blob/master/images/OpenRC_2.png "OpenRC")
 
 This program is provided by Macroing.org.
 
@@ -11,11 +11,12 @@ Supported Features
 * A very simple Ray Caster implementation.
 * Shapes such as planes, spheres and triangles.
 * Lights such as point lights.
-* Textures such as normal color textures.
+* Textures such as solid- and decal textures.
 * Texture mapping such as spherical texture mapping.
 * A simple camera for walking around in the scene.
+* Simple materials.
 
-**Note** More supported shapes, lights, textures and texture mapping algorithms may very well be added in the future. The simple camera may be updated to support walking- and looking around like in an FPS-game.
+**Note** More supported shapes, lights, materials, textures and texture mapping algorithms may very well be added in the future. The simple camera may be updated to support walking- and looking around like in an FPS-game.
 
 Supported Controls
 ------------------
@@ -54,7 +55,6 @@ This list contains some of the features and improvements that are likely to come
 * Add a bounding volume hierarchy (BVH) to the scene.
 * Add anti-aliasing.
 * Fix the camera, so it works like the camera in FPS-games.
-* Add materials like reflective and refractive. Maybe as BSDFs (BRDF and BTDF).
 
 Dependencies
 ------------
