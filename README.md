@@ -1,6 +1,10 @@
 OpenRC (v. 0.1-beta)
 ====================
-OpenRC is a simple Ray Caster implementation using OpenCL (via Aparapi).
+OpenRC (short for Open Ray Caster) is, as its name suggests, an open source program. But it's not just any program. It's a program for rendering 3D scenes using the Ray Casting algorithm in realtime on the GPU.
+
+Because of the name, Open Ray Caster, some of you might believe Ray Casting is the only goal with this project. This is, however, not true. Additional algorithms, such as Whitted Ray Tracing and Path Tracing, are likely to be implemented.
+
+The program runs a portion of its code on the GPU to speed things up, as previously mentioned. It does this using OpenCL, via a Java library called Aparapi. So OpenRC is written exclusively in Java. At least for now.
 
 ![alt text](https://github.com/macroing/OpenRC/blob/master/images/OpenRC_3.png "OpenRC")
 

@@ -46,27 +46,33 @@ import com.amd.aparapi.Kernel.EXECUTION_MODE;
  * <p>
  * The program runs a portion of its code on the GPU to speed things up, as previously mentioned. It does this using OpenCL, via a Java library called Aparapi. So OpenRC is written exclusively in Java. At least for now.
  * <p>
- * The controls currently defined are the following:
+ * Supported Features:
+ * <ul>
+ * <li>The Ray Casting algorithm.</li>
+ * <li>Shapes such as planes, spheres and triangles.</li>
+ * <li>Lights such as point lights.</li>
+ * <li>Textures such as solid- and decal textures.</li>
+ * <li>Texture mapping such as spherical texture mapping.</li>
+ * <li>A simple camera for walking around in the scene.</li>
+ * <li>Simple materials.</li>
+ * </ul>
+ * <p>
+ * Supported Controls:
  * <ul>
  * <li>A - Move left.</li>
  * <li>D - Move right.</li>
+ * <li>DOWN ARROW - Look down.</li>
  * <li>E - Display the current execution mode to standard output.</li>
  * <li>ESC - Exit the program. You may have to press a few times if you're using the execution mode JTP (Java Thread Pool), as it's pretty unresponsive.</li>
+ * <li>LEFT ARROW - Look left.</li>
+ * <li>RIGHT ARROW - Look right.</li>
  * <li>S - Move backward.</li>
  * <li>T - Toggle between the two execution modes GPU and JTP (Java Thread Pool).</li>
+ * <li>UP ARROW - Look up.</li>
  * <li>W - Move forward.</li>
  * </ul>
  * <p>
- * The features currently supported are the following:
- * <ul>
- * <li>Shapes such as planes, spheres and triangles.</li>
- * <li>Lights such as point lights.</li>
- * <li>Textures such as normal solid colored textures.</li>
- * <li>Texture mapping such as spherical texture mapping.</li>
- * <li>The Ray Casting algorithm.</li>
- * </ul>
- * <p>
- * Note that the features above will probably be expanded upon with time.
+ * Note: More supported shapes, lights, materials, textures and texture mapping algorithms may very well be added in the future. The simple camera may be updated to support walking- and looking around like in an FPS-game.
  * 
  * @since 1.0.0
  * @author J&#246;rgen Lundgren
