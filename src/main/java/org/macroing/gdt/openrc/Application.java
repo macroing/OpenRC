@@ -78,6 +78,7 @@ public final class Application implements KeyListener {
 	private final AtomicBoolean isTogglingExecutionMode = new AtomicBoolean();
 	private final boolean[] isKeyPressed = new boolean[1024];
 	private final BufferedImage bufferedImage = new BufferedImage(Constants.WIDTH, Constants.HEIGHT, BufferedImage.TYPE_INT_RGB);
+	private final float[] pick = new float[3];
 	private final FPSCounter fPSCounter = new FPSCounter();
 	private final int[] rGB;
 	private final JFrame jFrame;
@@ -90,7 +91,7 @@ public final class Application implements KeyListener {
 	public Application() {
 		this.rGB = doToRGB(this.bufferedImage);
 		this.jFrame = doCreateJFrame(this.bufferedImage, this.scene.getCamera(), this.fPSCounter);
-		this.kernel = new RayCasterKernel(this.rGB, this.scene);
+		this.kernel = new RayCasterKernel(this.pick, this.rGB, this.scene);
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -151,6 +152,9 @@ public final class Application implements KeyListener {
 //			Execute this Kernel instance:
 			this.kernel.execute(this.range);
 			
+//			Fetch the pick result:
+			this.kernel.get(this.pick);
+			
 //			Fetch the RGB-values calculated in the GPU to the rGB array, so we can display the result:
 			this.kernel.get(this.rGB);
 			
@@ -203,11 +207,15 @@ public final class Application implements KeyListener {
 		final Camera camera = this.scene.getCamera();
 		
 		if(this.isKeyPressed[KeyEvent.VK_A]) {
-			camera.move(-movement, 0.0F, 0.0F);
+			camera.move(-movement, 0.0F, movement);
 		}
 		
 		if(this.isKeyPressed[KeyEvent.VK_D]) {
-			camera.move(movement, 0.0F, 0.0F);
+			camera.move(movement, 0.0F, -movement);
+		}
+		
+		if(this.isKeyPressed[KeyEvent.VK_DOWN]) {
+			camera.look(0.0F, movement, 0.0F);
 		}
 		
 		if(this.isKeyPressed[KeyEvent.VK_E] && this.isPrintingExecutionMode.compareAndSet(false, true)) {
@@ -222,8 +230,16 @@ public final class Application implements KeyListener {
 			this.isTerminationRequested.compareAndSet(true, false);
 		}
 		
+		if(this.isKeyPressed[KeyEvent.VK_LEFT]) {
+			camera.look(-movement, 0.0F, movement);
+		}
+		
+		if(this.isKeyPressed[KeyEvent.VK_RIGHT]) {
+			camera.look(movement, 0.0F, -movement);
+		}
+		
 		if(this.isKeyPressed[KeyEvent.VK_S]) {
-			camera.move(0.0F, 0.0F, movement);
+			camera.move(movement, 0.0F, movement);
 		}
 		
 		if(this.isKeyPressed[KeyEvent.VK_T] && this.isTogglingExecutionMode.compareAndSet(false, true)) {
@@ -232,9 +248,15 @@ public final class Application implements KeyListener {
 			this.isTogglingExecutionMode.compareAndSet(true, false);
 		}
 		
-		if(this.isKeyPressed[KeyEvent.VK_W]) {
-			camera.move(0.0F, 0.0F, -movement);
+		if(this.isKeyPressed[KeyEvent.VK_UP]) {
+			camera.look(0.0F, -movement, 0.0F);
 		}
+		
+		if(this.isKeyPressed[KeyEvent.VK_W]) {
+			camera.move(-movement, 0.0F, -movement);
+		}
+		
+		System.out.println("ShapeOffset=" + this.pick[0] + ", ShapeDistance=" + this.pick[1]);
 		
 //		Perform View Frustum Culling:
 		doPerformFrustumCulling();

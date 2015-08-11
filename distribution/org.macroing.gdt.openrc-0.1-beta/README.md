@@ -2,7 +2,7 @@ OpenRC (v. 0.1-beta)
 ====================
 OpenRC is a simple Ray Caster implementation using OpenCL (via Aparapi).
 
-![alt text](https://github.com/macroing/OpenRC/blob/master/images/OpenRC_2.png "OpenRC")
+![alt text](https://github.com/macroing/OpenRC/blob/master/images/OpenRC_3.png "OpenRC")
 
 This program is provided by Macroing.org.
 
@@ -22,10 +22,14 @@ Supported Controls
 ------------------
 * Press 'A' to move left.
 * Press 'D' to move right.
+* Press 'DOWN ARROW' to look down.
 * Press 'E' to display the current execution mode (GPU or JTP*).
 * Press 'ESC' to exit.
+* Press 'LEFT ARROW' to look left.
+* Press 'RIGHT ARROW' to look right.
 * Press 'S' to move backward.
 * Press 'T' to toggle between the GPU- and JTP* execution modes.
+* Press 'UP ARROW' to look up.
 * Press 'W' to move forward.
 
 **Note** When running with the execution mode JTP*, you may have to press more than once, as it may be very unresponsive, because everything is running in the CPU.

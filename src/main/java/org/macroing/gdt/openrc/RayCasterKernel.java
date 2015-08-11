@@ -37,6 +37,7 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 	private final float[] intersections;
 	private final float[] lights;
 	private final float[] materials;
+	private final float[] pick;
 	private final float[] pixels;
 	private final float[] rays;
 	private final float[] shapes;
@@ -50,11 +51,12 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	public RayCasterKernel(final int[] rGB, final Scene scene) {
+	public RayCasterKernel(final float[] pick, final int[] rGB, final Scene scene) {
 		this.camera = scene.getCamera().getArray();
 		this.intersections = Intersection.create(Constants.WIDTH * Constants.HEIGHT);
 		this.lights = scene.getLightsAsArray();
 		this.materials = scene.getMaterialsAsArray();
+		this.pick = pick;
 		this.pixels = new float[Constants.WIDTH * Constants.HEIGHT * Constants.SIZE_OF_PIXEL];
 		this.rays = new float[Constants.WIDTH * Constants.HEIGHT * Constants.SIZE_OF_RAY];
 		this.shapes = scene.getShapesAsArray();
@@ -73,6 +75,8 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		put(this.intersections);
 		put(this.lights);
 		put(this.materials);
+		put(this.pick);
+		put(this.pixels);
 		put(this.rays);
 		put(this.shapes);
 		put(this.rGB);
@@ -88,6 +92,7 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 	public void run() {
 //		Initialize index and offset values:
 		final int index = getGlobalId();
+		final int pickIndex = this.height / 2 * this.width + this.width / 2;
 		final int pixelOffset = index * Constants.SIZE_OF_PIXEL;
 		final int rayOffset = index * Constants.SIZE_OF_RAY;
 		
@@ -121,6 +126,15 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 //			Calculate the ambient and direct light:
 			attemptToAddAmbientLight(this.materials, this.pixels, materialOffset, pixelOffset);
 			attemptToAddDirectLight(this.intersections, this.lights, this.materials, this.pixels, this.shapes, intersectionOffset, this.lightsLength, materialOffset, pixelOffset, shapeOffset, this.textures);
+		}
+		
+		if(index == pickIndex) {
+			this.pick[0] = (this.intersections[index * Intersection.SIZE_OF_INTERSECTION + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET]);
+			this.pick[1] = distance;
+			
+			this.pixels[pixelOffset + 0] = 1.0F;
+			this.pixels[pixelOffset + 1] = 1.0F;
+			this.pixels[pixelOffset + 2] = 1.0F;
 		}
 		
 //		Update the pixel by performing gamma correction, tone mapping and scaling:

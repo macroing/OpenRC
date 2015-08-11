@@ -68,7 +68,7 @@ final class Camera {
 	public Camera() {
 		setEye(500.0F, 0.0F, 500.0F);
 		setUp(0.0F, 1.0F, 0.0F);
-		setLookAt(0.0F, 0.0F, -800.0F);
+		setLookAt(0.0F, 0.0F, 0.0F);
 		setViewPlaneDistance(800.0F);
 		calculateOrthonormalBasis();
 	}
@@ -157,16 +157,28 @@ final class Camera {
 	
 	public void calculateOrthonormalBasis() {
 		Vector.subtract(this.array, ABSOLUTE_OFFSET_OF_CAMERA_EYE, this.array, ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W);
-		doNormalize(this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W);
+		Vector.normalize(this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W);
 		Vector.crossProduct(this.array, ABSOLUTE_OFFSET_OF_CAMERA_UP, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U);
-		doNormalize(this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U);
+		Vector.normalize(this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U);
 		Vector.crossProduct(this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V);
+	}
+	
+	public void look(final float x, final float y, final float z) {
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0] += x;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1] += y;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2] += z;
+		
+		calculateOrthonormalBasis();
 	}
 	
 	public void move(final float x, final float y, final float z) {
 		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0] += x;
 		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1] += y;
 		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2] += z;
+		
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0] += x;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1] += y;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2] += z;
 		
 		calculateOrthonormalBasis();
 	}
@@ -191,19 +203,5 @@ final class Camera {
 	
 	public void setViewPlaneDistance(final float distance) {
 		this.array[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE] = distance;
-	}
-	
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	
-	private static float doLength(final float[] vector, final int offset) {
-		return (float)(Math.sqrt(Vector.lengthSquared(vector, offset)));
-	}
-	
-	private static void doNormalize(final float[] vector, final int offset) {
-		final float lengthReciprocal = 1.0F / doLength(vector, offset);
-		
-		vector[offset + 0] *= lengthReciprocal;
-		vector[offset + 1] *= lengthReciprocal;
-		vector[offset + 2] *= lengthReciprocal;
 	}
 }

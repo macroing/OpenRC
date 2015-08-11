@@ -29,6 +29,10 @@ final class Vector {
 		return vector0[offset0] * vector1[offset1] + vector0[offset0 + 1] * vector1[offset1 + 1] + vector0[offset0 + 2] * vector1[offset1 + 2];
 	}
 	
+	public static float length(final float[] vector, final int offset) {
+		return (float)(Math.sqrt(lengthSquared(vector, offset)));
+	}
+	
 	public static float lengthSquared(final float[] vector, final int offset) {
 		return dotProduct(vector, offset, vector, offset);
 	}
@@ -44,6 +48,14 @@ final class Vector {
 		vector2[offset2 + 0] = y0 * z1 - z0 * y1;
 		vector2[offset2 + 1] = z0 * x1 - x0 * z1;
 		vector2[offset2 + 2] = x0 * y1 - y0 * x1;
+	}
+	
+	public static void normalize(final float[] vector, final int offset) {
+		final float lengthReciprocal = 1.0F / length(vector, offset);
+		
+		vector[offset + 0] *= lengthReciprocal;
+		vector[offset + 1] *= lengthReciprocal;
+		vector[offset + 2] *= lengthReciprocal;
 	}
 	
 	public static void subtract(final float[] vector0, final int offset0, final float[] vector1, final int offset1, final float[] vector2, final int offset2) {

@@ -77,7 +77,7 @@ final class Sphere extends Shape {
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	public static Sphere random(final float materialOffset) {
-		return new Sphere(materialOffset, doRandom(1000.0F), 16.5F, doRandom(1000.0F), 16.5F);
+		return new Sphere(materialOffset, doRandom(1000.0F), 12.5F, doRandom(1000.0F), 16.5F);
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
