@@ -12,7 +12,7 @@ This program is provided by Macroing.org.
 
 Supported Features
 ------------------
-* A very simple Ray Caster implementation.
+* The Ray Casting algorithm.
 * Shapes such as planes, spheres and triangles.
 * Lights such as point lights.
 * Textures such as solid- and decal textures.
