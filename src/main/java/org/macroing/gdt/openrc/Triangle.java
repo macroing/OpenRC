@@ -19,7 +19,7 @@
 package org.macroing.gdt.openrc;
 
 final class Triangle extends Shape {
-	public static final float TYPE_TRIANGLE = 3.0F;
+	public static final float TYPE = 3.0F;
 	public static final int RELATIVE_OFFSET_OF_TRIANGLE_A = 3;
 	public static final int RELATIVE_OFFSET_OF_TRIANGLE_B = 6;
 	public static final int RELATIVE_OFFSET_OF_TRIANGLE_C = 9;
@@ -66,7 +66,7 @@ final class Triangle extends Shape {
 	
 	@Override
 	public float getType() {
-		return TYPE_TRIANGLE;
+		return TYPE;
 	}
 	
 	@Override

@@ -117,7 +117,7 @@ final class Scene {
 		
 		builder.addMaterial(Material.blackPlastic().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
 		builder.addMaterial(Material.blue().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
-		builder.addMaterial(Material.brass().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.brass().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[1]));
 		builder.addMaterial(Material.green().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
 		builder.addMaterial(Material.obsidian().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
 		builder.addMaterial(Material.red().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));

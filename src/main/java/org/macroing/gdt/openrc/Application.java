@@ -50,7 +50,7 @@ import com.amd.aparapi.Kernel.EXECUTION_MODE;
  * <li>Shapes such as planes, spheres and triangles.</li>
  * <li>Lights such as point lights.</li>
  * <li>Textures such as solid- and decal textures.</li>
- * <li>Texture mapping such as spherical texture mapping.</li>
+ * <li>Texture mapping such as spherical- and triangle texture mapping.</li>
  * <li>A simple camera for walking around in the scene.</li>
  * <li>Simple materials.</li>
  * <li>Occluding shapes create shadows.</li>

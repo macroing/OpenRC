@@ -21,7 +21,7 @@ package org.macroing.gdt.openrc;
 import java.util.concurrent.ThreadLocalRandom;
 
 final class Sphere extends Shape {
-	public static final float TYPE_SPHERE = 1.0F;
+	public static final float TYPE = 1.0F;
 	public static final int RELATIVE_OFFSET_OF_SPHERE_POSITION = 3;
 	public static final int RELATIVE_OFFSET_OF_SPHERE_RADIUS = 6;
 	
@@ -51,7 +51,7 @@ final class Sphere extends Shape {
 	
 	@Override
 	public float getType() {
-		return TYPE_SPHERE;
+		return TYPE;
 	}
 	
 	@Override
