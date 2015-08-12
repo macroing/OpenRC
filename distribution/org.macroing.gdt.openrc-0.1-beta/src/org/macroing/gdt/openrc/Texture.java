@@ -115,7 +115,7 @@ final class Texture {
 	}
 	
 	public static Texture createSolidTexture() {
-		return new Texture(1, 1, TYPE_DECAL_TEXTURE, new int[] {255});
+		return new Texture(1, 1, TYPE_SOLID_TEXTURE, new int[] {255});
 	}
 	
 	public static Texture createSolidTexture(final InputStream inputStream) {

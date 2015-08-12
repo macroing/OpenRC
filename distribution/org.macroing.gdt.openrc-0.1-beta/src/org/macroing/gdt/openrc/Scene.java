@@ -106,15 +106,16 @@ final class Scene {
 	public static Scene create() {
 		final
 		Builder builder = new Builder();
-//		builder.addTexture(Texture.createSolidTexture("Texture_0.jpg"));
+		builder.addTexture(Texture.createSolidTexture("Texture_0.jpg"));
 //		builder.addTexture(Texture.createSolidTexture("Texture_1.png"));
 		builder.addTexture(Texture.createSolidTexture("Texture_2.png"));
 //		builder.addTexture(Texture.createSolidTexture("Texture_3.png"));
 //		builder.addTexture(Texture.createDecalTexture("Texture_4.png"));
+		builder.addTexture(Texture.createSolidTexture("Texture_5.jpg"));
 		
 		final int[] textureOffsets = builder.calculateTextureOffsets();
 		
-//		builder.addMaterial(Material.blackPlastic().setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
 		builder.addMaterial(Material.blue().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
 		builder.addMaterial(Material.brass().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
 		builder.addMaterial(Material.green().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
@@ -133,8 +134,8 @@ final class Scene {
 			builder.addShape(Sphere.random(materialOffsets[doRandom(materialOffsets.length)]));
 		}
 		
-		builder.addShape(new Plane(materialOffsets[1], 0.5F, 0.0F, 0.5F));
-		builder.addShape(new Triangle(materialOffsets[1], 2500.0F, 40.0F, 2500.0F, 1000.0F, 40.0F, 1500.0F, -1000.0F, 40.0F, -1000.0F));
+		builder.addShape(new Plane(materialOffsets[2], 0.5F, 0.0F, 0.5F));
+		builder.addShape(new Triangle(materialOffsets[2], 2500.0F, 40.0F, 2500.0F, 1000.0F, 40.0F, 1500.0F, -1000.0F, 40.0F, -1000.0F));
 		
 		return builder.build();
 	}

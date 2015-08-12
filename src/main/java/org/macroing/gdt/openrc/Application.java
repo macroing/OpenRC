@@ -261,7 +261,7 @@ public final class Application implements KeyListener {
 			camera.move(-movement, 0.0F, -movement);
 		}
 		
-		System.out.println("ShapeOffset=" + this.pick[0] + ", ShapeDistance=" + this.pick[1]);
+//		System.out.println("ShapeOffset=" + this.pick[0] + ", ShapeDistance=" + this.pick[1]);
 		
 //		Perform View Frustum Culling:
 		doPerformFrustumCulling();
