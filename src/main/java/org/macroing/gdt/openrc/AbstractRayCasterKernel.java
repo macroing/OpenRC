@@ -31,7 +31,7 @@ abstract class AbstractRayCasterKernel extends Kernel {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	public float calculateShadeForPointLight(final float[] intersections, final float[] lights, final float[] rays, final float[] shapes, final int intersectionOffset, final int lightOffset, final int rayOffset, final int shapeIndicesLength, final int[] shapeIndices) {
+	public float calculateShadeForPointLight(final boolean isUpdatingPick, final float[] intersections, final float[] lights, final float[] pick, final float[] rays, final float[] shapes, final int intersectionOffset, final int lightOffset, final int rayOffset, final int shapeIndicesLength, final int[] shapeIndices) {
 //		Get the location of the point light:
 		final float pointLightX = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION + 0];
 		final float pointLightY = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POINT_LIGHT_POSITION + 1];
@@ -70,7 +70,7 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		final float distance0 = sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ);
 		
 //		Calculate the distance between the surface intersection point and the closest intersecting shape:
-		final float distance1 = findIntersection(false, false, intersections, rays, shapes, shapeIndicesLength, shapeIndices);
+		final float distance1 = findIntersection(false, false, isUpdatingPick, intersections, pick, rays, shapes, shapeIndicesLength, shapeIndices);
 		
 //		Calculate the shade as 1.0 if, and only if, the distance between the surface intersection point and the point light is less than the distance between the surface intersection point and the closest intersecting shape, 0.0 otherwise:
 		final float shade = distance0 < distance1 ? 1.0F : 0.0F;
@@ -78,7 +78,7 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		return shade;
 	}
 	
-	public float findIntersection(final boolean isPrimaryIntersection, final boolean isUpdatingIntersection, final float[] intersections, final float[] rays, final float[] shapes, final int shapeIndicesLength, final int[] shapeIndices) {
+	public float findIntersection(final boolean isPrimaryIntersection, final boolean isUpdatingIntersection, final boolean isUpdatingPick, final float[] intersections, final float[] pick, final float[] rays, final float[] shapes, final int shapeIndicesLength, final int[] shapeIndices) {
 //		Initialize the index and offset values:
 		final int index = getGlobalId();
 		final int intersectionOffset = index * Intersection.SIZE_OF_INTERSECTION;
@@ -234,7 +234,7 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		return sqrt(lengthSquared(vector, offset));
 	}
 	
-	public void attemptToAddAmbientLight(final float[] intersections, final float[] materials, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int[] textures) {
+	public void attemptToAddAmbientLight(final boolean isUpdatingPick, final float[] intersections, final float[] materials, final float[] pick, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int[] textures) {
 //		Get the ambient intensity:
 		final float ambientIntensity = materials[materialOffset + Material.RELATIVE_OFFSET_OF_AMBIENT_INTENSITY];
 		
@@ -250,7 +250,7 @@ abstract class AbstractRayCasterKernel extends Kernel {
 			pixels[pixelOffset + 5] = 0.0F;
 			
 //			Perform texture mapping on the shape:
-			performTextureMapping(intersections, materials, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textures);
+			performTextureMapping(isUpdatingPick, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textures);
 			
 //			Add the RGB-components of the ambient color multiplied by the ambient intensity, to the pixel:
 			pixels[pixelOffset + 0] += (ambientColorR + pixels[pixelOffset + 3]) * ambientIntensity;
@@ -259,7 +259,7 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		}
 	}
 	
-	public void attemptToAddDiffuseReflectionFromPointLight(final float shade, final float[] intersections, final float[] lights, final float[] materials, final float[] pixels, final float[] shapes, final int intersectionOffset, final int lightOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int[] textures) {
+	public void attemptToAddDiffuseReflectionFromPointLight(final boolean isUpdatingPick, final float shade, final float[] intersections, final float[] lights, final float[] materials, final float[] pick, final float[] pixels, final float[] shapes, final int intersectionOffset, final int lightOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int[] textures) {
 //		Get the diffuse intensity:
 		final float diffuseIntensity = materials[materialOffset + Material.RELATIVE_OFFSET_OF_DIFFUSE_INTENSITY];
 		
@@ -309,7 +309,7 @@ abstract class AbstractRayCasterKernel extends Kernel {
 			pixels[pixelOffset + 5] = 0.0F;
 			
 //			Perform texture mapping on the shape:
-			performTextureMapping(intersections, materials, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textures);
+			performTextureMapping(isUpdatingPick, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textures);
 			
 //			Add the RGB-components of the diffuse color multiplied by the diffuse component, to the pixel:
 			pixels[pixelOffset + 0] += (diffuseColorR + pixels[pixelOffset + 3]) * diffuseComponent;
@@ -318,7 +318,7 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		}
 	}
 	
-	public void attemptToAddDirectLight(final float[] intersections, final float[] lights, final float[] materials, final float[] pixels, final float[] rays, final float[] shapes, final int intersectionOffset, final int lightsLength, final int materialOffset, final int pixelOffset, final int rayOffset, final int shapeIndicesLength, final int shapeOffset, final int[] shapeIndices, final int[] textures) {
+	public void attemptToAddDirectLight(final boolean isUpdatingPick, final float[] intersections, final float[] lights, final float[] materials, final float[] pick, final float[] pixels, final float[] rays, final float[] shapes, final int intersectionOffset, final int lightsLength, final int materialOffset, final int pixelOffset, final int rayOffset, final int shapeIndicesLength, final int shapeOffset, final int[] shapeIndices, final int[] textures) {
 		for(int i = 0, j = 0; i < lightsLength; i += j) {
 //			Initialize the temporary type and size variables of the current light:
 			final float lightType = lights[i + Light.RELATIVE_OFFSET_OF_LIGHT_TYPE];
@@ -328,10 +328,10 @@ abstract class AbstractRayCasterKernel extends Kernel {
 			j = (int)(lightSize);
 			
 			if(lightType == PointLight.TYPE_POINT_LIGHT) {
-				final float shade = calculateShadeForPointLight(intersections, lights, rays, shapes, intersectionOffset, i, rayOffset, shapeIndicesLength, shapeIndices);
+				final float shade = calculateShadeForPointLight(isUpdatingPick, intersections, lights, pick, rays, shapes, intersectionOffset, i, rayOffset, shapeIndicesLength, shapeIndices);
 				
 				if(shade > 0.0F) {
-					attemptToAddDiffuseReflectionFromPointLight(shade, intersections, lights, materials, pixels, shapes, intersectionOffset, i, materialOffset, pixelOffset, shapeOffset, textures);
+					attemptToAddDiffuseReflectionFromPointLight(isUpdatingPick, shade, intersections, lights, materials, pick, pixels, shapes, intersectionOffset, i, materialOffset, pixelOffset, shapeOffset, textures);
 					attemptToAddSpecularReflectionFromPointLight(shade, intersections, lights, materials, pixels, intersectionOffset, i, materialOffset, pixelOffset);
 				}
 			}
@@ -430,7 +430,7 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		vector[offset + 2] *= lengthReciprocal;
 	}
 	
-	public void performSphericalTextureMapping(final float[] intersections, final float[] materials, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int textureOffset, final int[] textures) {
+	public void performSphericalTextureMapping(final boolean isUpdatingPick, final float[] intersections, final float[] materials, final float[] pick, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int textureOffset, final int[] textures) {
 //		Initialize the variables with the position (the X-, Y- and Z-values) of the sphere:
 		final float sphereX = shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_SPHERE_POSITION + 0];
 		final float sphereY = shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_SPHERE_POSITION + 1];
@@ -486,9 +486,15 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		pixels[pixelOffset + 3] += r;
 		pixels[pixelOffset + 4] += g;
 		pixels[pixelOffset + 5] += b;
+		
+		if(isUpdatingPick) {
+			pick[Constants.RELATIVE_OFFSET_OF_PICK_TEXTURE_OFFSET] = textureOffset;
+			pick[Constants.RELATIVE_OFFSET_OF_PICK_TEXTURE_UV + 0] = textureX;
+			pick[Constants.RELATIVE_OFFSET_OF_PICK_TEXTURE_UV + 1] = textureY;
+		}
 	}
 	
-	public void performTextureMapping(final float[] intersections, final float[] materials, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int[] textures) {
+	public void performTextureMapping(final boolean isUpdatingPick, final float[] intersections, final float[] materials, final float[] pick, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int[] textures) {
 //		Initialize the texture count:
 		final int textureCount = (int)(materials[materialOffset + Material.RELATIVE_OFFSET_OF_TEXTURE_COUNT]);
 		
@@ -499,7 +505,7 @@ abstract class AbstractRayCasterKernel extends Kernel {
 					final int textureOffset = (int)(materials[materialOffset + Material.RELATIVE_OFFSET_OF_TEXTURE_COUNT + i + 1]);
 					
 //					Perform spherical texture mapping on the sphere:
-					performSphericalTextureMapping(intersections, materials, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textureOffset, textures);
+					performSphericalTextureMapping(isUpdatingPick, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textureOffset, textures);
 				}
 			}
 			
@@ -509,13 +515,13 @@ abstract class AbstractRayCasterKernel extends Kernel {
 					final int textureOffset = (int)(materials[materialOffset + Material.RELATIVE_OFFSET_OF_TEXTURE_COUNT + i + 1]);
 					
 //					Perform texture mapping on a triangle:
-					performTriangleTextureMapping(intersections, materials, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textureOffset, textures);
+					performTriangleTextureMapping(isUpdatingPick, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textureOffset, textures);
 				}
 			}
 		}
 	}
 	
-	public void performTriangleTextureMapping(final float[] intersections, final float[] materials, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int textureOffset, final int[] textures) {
+	public void performTriangleTextureMapping(final boolean isUpdatingPick, final float[] intersections, final float[] materials, final float[] pick, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int textureOffset, final int[] textures) {
 //		Initialize the variables with the position (the X-, Y- and Z-values) of the triangle:
 		final float triangleAX = shapes[shapeOffset + Triangle.RELATIVE_OFFSET_OF_TRIANGLE_A + 0];
 		final float triangleAY = shapes[shapeOffset + Triangle.RELATIVE_OFFSET_OF_TRIANGLE_A + 1];
@@ -612,6 +618,12 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		pixels[pixelOffset + 3] += r;
 		pixels[pixelOffset + 4] += g;
 		pixels[pixelOffset + 5] += b;
+		
+		if(isUpdatingPick) {
+			pick[Constants.RELATIVE_OFFSET_OF_PICK_TEXTURE_OFFSET] = textureOffset;
+			pick[Constants.RELATIVE_OFFSET_OF_PICK_TEXTURE_UV + 0] = textureX;
+			pick[Constants.RELATIVE_OFFSET_OF_PICK_TEXTURE_UV + 1] = textureY;
+		}
 	}
 	
 	public void updateSurfaceNormalForSphere(final float[] intersections, final float[] shapes, final int intersectionOffset, final int shapeOffset) {

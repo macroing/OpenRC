@@ -100,6 +100,9 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		final float u = index % this.width - this.width / 2.0F + 0.5F;
 		final float v = index / this.width - this.height / 2.0F + 0.5F;
 		
+//		Initialize the pick update state:
+		final boolean isUpdatingPick = index == pickIndex;
+		
 //		Update the origin point and direction vector of the ray to fire:
 		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 0] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0];
 		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 1] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1];
@@ -112,7 +115,7 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		normalize(this.rays, rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0);
 		
 //		Calculate the distance to the closest shape, if any:
-		final float distance = findIntersection(true, true, this.intersections, this.rays, this.shapes, this.shapeIndicesLength, this.shapeIndices);
+		final float distance = findIntersection(true, true, isUpdatingPick, this.intersections, this.pick, this.rays, this.shapes, this.shapeIndicesLength, this.shapeIndices);
 		
 //		Update the pixels with the RGB-values reset to black:
 		clearPixel(this.pixels, pixelOffset);
@@ -124,11 +127,11 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 			final int materialOffset = (int)(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_MATERIAL_OFFSET]);
 			
 //			Calculate the ambient and direct light:
-			attemptToAddAmbientLight(this.intersections, this.materials, this.pixels, this.shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, this.textures);
-			attemptToAddDirectLight(this.intersections, this.lights, this.materials, this.pixels, this.rays, this.shapes, intersectionOffset, this.lightsLength, materialOffset, pixelOffset, rayOffset, this.shapeIndicesLength, shapeOffset, this.shapeIndices, this.textures);
+			attemptToAddAmbientLight(isUpdatingPick, this.intersections, this.materials, this.pick, this.pixels, this.shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, this.textures);
+			attemptToAddDirectLight(isUpdatingPick, this.intersections, this.lights, this.materials, this.pick, this.pixels, this.rays, this.shapes, intersectionOffset, this.lightsLength, materialOffset, pixelOffset, rayOffset, this.shapeIndicesLength, shapeOffset, this.shapeIndices, this.textures);
 		}
 		
-		if(index == pickIndex) {
+		if(isUpdatingPick) {
 			this.pick[0] = (this.intersections[index * Intersection.SIZE_OF_INTERSECTION + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET]);
 			this.pick[1] = distance;
 			

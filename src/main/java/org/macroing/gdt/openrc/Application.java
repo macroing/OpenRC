@@ -26,6 +26,7 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferInt;
 import java.awt.image.WritableRaster;
 import java.util.List;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JFrame;
@@ -63,6 +64,7 @@ import com.amd.aparapi.Kernel.EXECUTION_MODE;
  * <li>DOWN ARROW - Look down.</li>
  * <li>E - Display the current execution mode to standard output.</li>
  * <li>ESC - Exit the program. You may have to press a few times if you're using the execution mode JTP (Java Thread Pool), as it's pretty unresponsive.</li>
+ * <li>F - Fire invisible bullets to make the shapes bleed.</li>
  * <li>LEFT ARROW - Look left.</li>
  * <li>RIGHT ARROW - Look right.</li>
  * <li>S - Move backward.</li>
@@ -80,10 +82,11 @@ public final class Application implements KeyListener {
 	private final AtomicBoolean isPrintingExecutionMode = new AtomicBoolean();
 	private final AtomicBoolean isRunning = new AtomicBoolean();
 	private final AtomicBoolean isTerminationRequested = new AtomicBoolean();
+	private final AtomicBoolean isTextureUpdateRequired = new AtomicBoolean();
 	private final AtomicBoolean isTogglingExecutionMode = new AtomicBoolean();
 	private final boolean[] isKeyPressed = new boolean[1024];
 	private final BufferedImage bufferedImage = new BufferedImage(Constants.WIDTH, Constants.HEIGHT, BufferedImage.TYPE_INT_RGB);
-	private final float[] pick = new float[3];
+	private final float[] pick = new float[Constants.SIZE_OF_PICK];
 	private final FPSCounter fPSCounter = new FPSCounter();
 	private final int[] rGB;
 	private final JFrame jFrame;
@@ -153,6 +156,10 @@ public final class Application implements KeyListener {
 			
 //			Tell the API to fetch the shape indices before executing this Kernel instance (it will be transferred to the GPU every cycle):
 			this.kernel.put(this.scene.getShapeIndices());
+			
+			if(this.isTextureUpdateRequired.compareAndSet(true, false)) {
+				this.kernel.put(this.scene.getTexturesAsArray());
+			}
 			
 //			Execute this Kernel instance:
 			this.kernel.execute(this.range);
@@ -235,6 +242,35 @@ public final class Application implements KeyListener {
 			this.isTerminationRequested.compareAndSet(true, false);
 		}
 		
+		if(this.isKeyPressed[KeyEvent.VK_F]) {
+			final int textureOffset = (int)(this.pick[Constants.RELATIVE_OFFSET_OF_PICK_TEXTURE_OFFSET]);
+			final int textureU = (int)(this.pick[Constants.RELATIVE_OFFSET_OF_PICK_TEXTURE_UV + 0]);
+			final int textureV = (int)(this.pick[Constants.RELATIVE_OFFSET_OF_PICK_TEXTURE_UV + 1]);
+			
+			final int[] textures = this.scene.getTexturesAsArray();
+			
+			final int width = textures[textureOffset + Texture.RELATIVE_OFFSET_OF_TEXTURE_WIDTH];
+			final int startX = textureU - 5;
+			final int startY = textureV - 5;
+			final int radius = 2;
+			
+			for(int y = -radius; y <= radius; y++) {
+				for(int x = -radius; x <= radius; x++) {
+					if(x * x + y * y <= radius * radius) {
+						if(ThreadLocalRandom.current().nextGaussian() < 0.1D) {
+							final int rGB = ((ThreadLocalRandom.current().nextInt(100, 255) & 0xFF) << 16) | ((0 & 0xFF) << 8) | ((0 & 0xFF) << 0);
+							
+							final int offset = (startY + y) * width + (startX + x);
+							
+							textures[textureOffset + Texture.RELATIVE_OFFSET_OF_TEXTURE_DATA + offset] = rGB;
+						}
+					}
+				}
+			}
+			
+			this.isTextureUpdateRequired.set(true);
+		}
+		
 		if(this.isKeyPressed[KeyEvent.VK_LEFT]) {
 			camera.look(-movement, 0.0F, movement);
 		}
@@ -260,8 +296,6 @@ public final class Application implements KeyListener {
 		if(this.isKeyPressed[KeyEvent.VK_W]) {
 			camera.move(-movement, 0.0F, -movement);
 		}
-		
-//		System.out.println("ShapeOffset=" + this.pick[0] + ", ShapeDistance=" + this.pick[1]);
 		
 //		Perform View Frustum Culling:
 		doPerformFrustumCulling();
