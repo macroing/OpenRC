@@ -50,11 +50,6 @@ final class AbsoluteLayoutManager implements LayoutManager, Serializable {
 	}
 	
 	@Override
-	public void addLayoutComponent(final String name, final Component component) {
-//		Do nothing.
-	}
-	
-	@Override
 	public Dimension minimumLayoutSize(final Container parent) {
 		synchronized(parent.getTreeLock()) {
 			return preferredLayoutSize(parent);
@@ -63,14 +58,50 @@ final class AbsoluteLayoutManager implements LayoutManager, Serializable {
 	
 	@Override
 	public Dimension preferredLayoutSize(final Container parent) {
+		final Insets parentInsets = parent.getInsets();
+		
+		int x = parentInsets.left;
+		int y = parentInsets.top;
+		int width = 0;
+		int height = 0;
+		
 		synchronized(parent.getTreeLock()) {
-			return doGetContainerSize(parent);
+			for(final Component component : parent.getComponents()) {
+				if(component.isVisible()) {
+					final Point location = component.getLocation();
+					
+					final Dimension componentSize = doGetComponentSize(component);
+					
+					x = Math.min(x, location.x);
+					y = Math.min(y, location.y);
+					width = Math.max(width, location.x + componentSize.width);
+					height = Math.max(height, location.y + componentSize.height);
+				}
+			}
 		}
+		
+		if(x < parentInsets.left) {
+			width += parentInsets.left - x;
+		}
+		
+		if(y < parentInsets.top) {
+			height += parentInsets.top - y;
+		}
+		
+		width += parentInsets.right;
+		height += parentInsets.bottom;
+		
+		return new Dimension(width, height);
 	}
 	
 	@Override
 	public String toString() {
 		return String.format("[%s]", getClass().getName());
+	}
+	
+	@Override
+	public void addLayoutComponent(final String name, final Component component) {
+//		Do nothing.
 	}
 	
 	@Override
@@ -81,7 +112,7 @@ final class AbsoluteLayoutManager implements LayoutManager, Serializable {
 			int x = parentInsets.left;
 			int y = parentInsets.top;
 			
-			for(final Component component: parent.getComponents()) {
+			for(final Component component : parent.getComponents()) {
 				if(component.isVisible()) {
 					final Point location = component.getLocation();
 					
@@ -90,10 +121,10 @@ final class AbsoluteLayoutManager implements LayoutManager, Serializable {
 				}
 			}
 			
-			x = (x < parentInsets.left) ? parentInsets.left - x : 0;
-			y = (y < parentInsets.top) ? parentInsets.top - y : 0;
+			x = x < parentInsets.left ? parentInsets.left - x : 0;
+			y = y < parentInsets.top ? parentInsets.top - y : 0;
 			
-			for(final Component component: parent.getComponents()) {
+			for(final Component component : parent.getComponents()) {
 				if(component.isVisible()) {
 					final Point location = component.getLocation();
 					
@@ -120,47 +151,6 @@ final class AbsoluteLayoutManager implements LayoutManager, Serializable {
 		final Dimension preferredSize = component.getPreferredSize();
 		final Dimension size = component.getSize();
 		
-		Dimension componentSize = preferredSize;
-		
-		if(!this.isUsingPreferredSize && size.width > 0 && size.height > 0) {
-			componentSize = size;
-		}
-		
-		return componentSize;
-	}
-	
-	private Dimension doGetContainerSize(final Container parent) {
-		final Insets parentInsets = parent.getInsets();
-		
-		int x = parentInsets.left;
-		int y = parentInsets.top;
-		int width = 0;
-		int height = 0;
-		
-		for(final Component component : parent.getComponents()) {
-			if(component.isVisible()) {
-				final Point location = component.getLocation();
-				
-				final Dimension componentSize = doGetComponentSize(component);
-				
-				x = Math.min(x, location.x);
-				y = Math.min(y, location.y);
-				width = Math.max(width, location.x + componentSize.width);
-				height = Math.max(height, location.y + componentSize.height);
-			}
-		}
-		
-		if(x < parentInsets.left) {
-			width += parentInsets.left - x;
-		}
-		
-		if(y < parentInsets.top) {
-			height += parentInsets.top - y;
-		}
-		
-		width += parentInsets.right;
-		height += parentInsets.bottom;
-		
-		return new Dimension(width, height);
+		return !this.isUsingPreferredSize && size.width > 0 && size.height > 0 ? size : preferredSize;
 	}
 }

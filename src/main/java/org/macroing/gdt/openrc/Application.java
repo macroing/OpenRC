@@ -18,7 +18,6 @@
  */
 package org.macroing.gdt.openrc;
 
-import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
@@ -29,7 +28,6 @@ import java.awt.image.WritableRaster;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
 
-import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
 
@@ -55,6 +53,7 @@ import com.amd.aparapi.Kernel.EXECUTION_MODE;
  * <li>Texture mapping such as spherical texture mapping.</li>
  * <li>A simple camera for walking around in the scene.</li>
  * <li>Simple materials.</li>
+ * <li>Occluding shapes create shadows.</li>
  * </ul>
  * <p>
  * Supported Controls:
@@ -302,7 +301,6 @@ public final class Application implements KeyListener {
 	private static JPanel doCreateJPanel(final BufferedImage bufferedImage, final Camera camera, final FPSCounter fPSCounter) {
 		final
 		JPanel jPanel = new JBufferedImagePanel(bufferedImage, camera, fPSCounter);
-		jPanel.setBorder(BorderFactory.createLineBorder(Color.WHITE, 1));
 		jPanel.setLayout(new AbsoluteLayoutManager());
 		jPanel.setPreferredSize(new Dimension(bufferedImage.getWidth(), bufferedImage.getHeight()));
 		

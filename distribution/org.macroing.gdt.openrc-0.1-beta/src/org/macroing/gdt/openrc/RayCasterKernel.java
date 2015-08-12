@@ -101,18 +101,18 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		final float v = index / this.width - this.height / 2.0F + 0.5F;
 		
 //		Update the origin point and direction vector of the ray to fire:
-		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN + 0] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0];
-		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN + 1] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1];
-		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN + 2] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2];
-		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION + 0] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U + 0] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V + 0] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W + 0] * this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE];
-		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION + 1] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U + 1] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V + 1] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W + 1] * this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE];
-		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION + 2] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U + 2] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V + 2] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W + 2] * this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE];
+		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 0] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0];
+		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 1] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1];
+		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 2] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2];
+		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 0] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U + 0] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V + 0] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W + 0] * this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE];
+		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 1] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U + 1] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V + 1] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W + 1] * this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE];
+		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 2] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U + 2] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V + 2] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W + 2] * this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE];
 		
 //		Normalize the ray direction vector:
-		normalize(this.rays, rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION);
+		normalize(this.rays, rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0);
 		
 //		Calculate the distance to the closest shape, if any:
-		final float distance = findIntersection(this.intersections, this.rays, this.shapes, this.shapeIndicesLength, this.shapeIndices);
+		final float distance = findIntersection(true, true, this.intersections, this.rays, this.shapes, this.shapeIndicesLength, this.shapeIndices);
 		
 //		Update the pixels with the RGB-values reset to black:
 		clearPixel(this.pixels, pixelOffset);
@@ -124,17 +124,18 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 			final int materialOffset = (int)(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_MATERIAL_OFFSET]);
 			
 //			Calculate the ambient and direct light:
-			attemptToAddAmbientLight(this.materials, this.pixels, materialOffset, pixelOffset);
-			attemptToAddDirectLight(this.intersections, this.lights, this.materials, this.pixels, this.shapes, intersectionOffset, this.lightsLength, materialOffset, pixelOffset, shapeOffset, this.textures);
+			attemptToAddAmbientLight(this.intersections, this.materials, this.pixels, this.shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, this.textures);
+			attemptToAddDirectLight(this.intersections, this.lights, this.materials, this.pixels, this.rays, this.shapes, intersectionOffset, this.lightsLength, materialOffset, pixelOffset, rayOffset, this.shapeIndicesLength, shapeOffset, this.shapeIndices, this.textures);
 		}
 		
 		if(index == pickIndex) {
 			this.pick[0] = (this.intersections[index * Intersection.SIZE_OF_INTERSECTION + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET]);
 			this.pick[1] = distance;
 			
-			this.pixels[pixelOffset + 0] = 1.0F;
-			this.pixels[pixelOffset + 1] = 1.0F;
-			this.pixels[pixelOffset + 2] = 1.0F;
+//			Uncomment the following code to show a white pixel at the 'center' of the screen, where the pick is used:
+//			this.pixels[pixelOffset + 0] = 1.0F;
+//			this.pixels[pixelOffset + 1] = 1.0F;
+//			this.pixels[pixelOffset + 2] = 1.0F;
 		}
 		
 //		Update the pixel by performing gamma correction, tone mapping and scaling:
