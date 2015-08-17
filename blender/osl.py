@@ -14,15 +14,24 @@ bl_info = {
 import bpy, bmesh
 from struct import pack
 
+WRITE_FLOAT = '!f'
+WRITE_INT = '!i'
+
+def writeFloat(fd, f):
+    fd.write(pack(WRITE_FLOAT, f))
+
+def writeInt(fd, i):
+    fd.write(pack(WRITE_INT, i))
+
 class DataBlock:
     def __init__(self):
         self.content = []
 
     def packF(self, f):
-        self.content.append(('!f', f))
+        self.content.append((WRITE_FLOAT, f))
 
     def packI(self, i):
-        self.content.append(('!i', i))
+        self.content.append((WRITE_INT, i))
 
     def write(self, fd):
         for (type, value) in self.content:
@@ -33,6 +42,8 @@ class Scene:
         self.packsTriangles = []
         self.packsLights = []
         self.packCamera = None
+        self.packsMaterials = []
+        self.materialOffset = 0
 
         for obj in scene.objects:
             switch = {
@@ -45,17 +56,46 @@ class Scene:
                 print('Adding %s "%s"' % (description, obj.name))
                 call(obj)
 
+
     def addObjectMesh(self, obj):
+        matOff = self.materialOffset
+        for mat in obj.material_slots:
+            m = mat.material
+
+            p = DataBlock()
+            p.packF(0.0) # Ambient
+            p.packF(0.0)
+            p.packF(0.0)
+            p.packF(0.0)
+            p.packF(m.diffuse_color[0]) # Diffuse color
+            p.packF(m.diffuse_color[1])
+            p.packF(m.diffuse_color[2])
+            p.packF(m.diffuse_intensity)
+            p.packF(m.specular_color[0]) # Specular color
+            p.packF(m.specular_color[1])
+            p.packF(m.specular_color[2])
+            p.packF(1.0)
+            p.packF(0.5)
+            p.packF(0.5)
+            p.packF(0.0)
+#:      Specular_Power                      ---
+#:      Reflection                          ---
+#:      Refraction                          ---
+#:      Texture_Count                       ---
+#[]:    Texture_Offsets[Texture_Count]      ---
+            self.addMaterial(p)
+
         bm = bmesh.new()
         bm.from_mesh(obj.data)
         for loops in bm.calc_tessface():
             normal = loops[0].face.normal
             cos = [loops[i].vert.co for i in range(3)]
+            materialId = loops[0].face.material_index
 
             p = DataBlock()
             p.packF(3.0) # Type
             p.packF(15.0) # Size
-            p.packF(0) # Material # Not impl
+            p.packF(materialId + matOff) # Material # Not impl
             p.packF(cos[0].x) # A_X
             p.packF(cos[0].y) # A_Y
             p.packF(cos[0].z) # A_Z
@@ -100,25 +140,44 @@ class Scene:
         self.packCamera = p
 
     def addObjectPointLight(self, obj):
-        pass
+        co = obj.location
+
+        p = DataBlock()
+        p.packF(1.0)
+        p.packF(6.0)
+        p.packF(co.x)
+        p.packF(co.y)
+        p.packF(co.z)
+        p.packF(1.0)
 
     def addTexture(self, data):
         pass
 
     def addMaterial(self, mat):
-        pass
+        self.packsMaterials.append(mat)
+        self.materialOffset += 1
 
     def write(self, fd):
         #float[]:    Camera[19]                          ---
         self.packCamera.write(fd)
+
         #float:      Textures_Length                     ---
         #float[]:    Textures[Textures_Length]           ---
+        writeFloat(fd, 0.0)
+
         #float:      Materials_Length                    ---
         #float[]:    Materials[Materials_Length]         ---
+        writeFloat(fd, float(len(self.packsMaterials)))
+        for p in self.packsMaterials: p.write(fd)
+
         #float:      Lights_Length                       ---
         #float[]:    Lights[Lights_Length]               ---
+        writeFloat(fd, float(len(self.packsLights)))
+        for p in self.packsLights: p.write(fd)
+
         #float:      Shapes_Length                       ---
         #float[]:    Shapes[Shapes_Length]               ---
+        writeFloat(fd, float(len(self.packsTriangles)))
         for p in self.packsTriangles: p.write(fd)
 
 class ObjectMoveX(bpy.types.Operator):
