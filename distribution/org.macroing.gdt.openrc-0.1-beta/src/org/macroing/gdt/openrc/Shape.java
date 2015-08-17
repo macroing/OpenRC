@@ -18,6 +18,11 @@
  */
 package org.macroing.gdt.openrc;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
 /**
  * The values in the {@code float} array created by the {@code toFloatArray()} method consists of the following:
  * <ol>
@@ -64,5 +69,51 @@ abstract class Shape {
 	
 	public final void setIndex(final int index) {
 		this.index = index;
+	}
+	
+	public abstract void write(final DataOutput dataOutput);
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	public static Shape read(final DataInput dataInput) {
+		try {
+			final float type = dataInput.readFloat();
+			final float size = dataInput.readFloat();
+			final float materialOffset = dataInput.readFloat();
+			
+			if(type == Plane.TYPE && size == Plane.SIZE_OF_PLANE) {
+				final float surfaceNormalX = dataInput.readFloat();
+				final float surfaceNormalY = dataInput.readFloat();
+				final float surfaceNormalZ = dataInput.readFloat();
+				
+				return new Plane(materialOffset, surfaceNormalX, surfaceNormalY, surfaceNormalZ);
+			} else if(type == Sphere.TYPE && size == Sphere.SIZE_OF_SPHERE) {
+				final float x = dataInput.readFloat();
+				final float y = dataInput.readFloat();
+				final float z = dataInput.readFloat();
+				final float radius = dataInput.readFloat();
+				
+				return new Sphere(materialOffset, x, y, z, radius);
+			} else if(type == Triangle.TYPE && size == Triangle.SIZE_OF_TRIANGLE) {
+				final float aX = dataInput.readFloat();
+				final float aY = dataInput.readFloat();
+				final float aZ = dataInput.readFloat();
+				final float bX = dataInput.readFloat();
+				final float bY = dataInput.readFloat();
+				final float bZ = dataInput.readFloat();
+				final float cX = dataInput.readFloat();
+				final float cY = dataInput.readFloat();
+				final float cZ = dataInput.readFloat();
+				final float surfaceNormalX = dataInput.readFloat();
+				final float surfaceNormalY = dataInput.readFloat();
+				final float surfaceNormalZ = dataInput.readFloat();
+				
+				return new Triangle(materialOffset, aX, aY, aZ, bX, bY, bZ, cX, cY, cZ, surfaceNormalX, surfaceNormalY, surfaceNormalZ);
+			}
+			
+			throw new IllegalArgumentException();
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 }

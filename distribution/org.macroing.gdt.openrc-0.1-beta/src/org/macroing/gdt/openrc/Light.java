@@ -18,6 +18,11 @@
  */
 package org.macroing.gdt.openrc;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
 /**
  * The values in the {@code float} array created by the {@code toFloatArray()} method consists of the following:
  * <ol>
@@ -40,4 +45,28 @@ interface Light {
 	float[] toFloatArray();
 	
 	int size();
+	
+	void write(final DataOutput dataOutput);
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	static Light read(final DataInput dataInput) {
+		try {
+			final float type = dataInput.readFloat();
+			final float size = dataInput.readFloat();
+			
+			if(type == PointLight.TYPE_POINT_LIGHT && size == PointLight.SIZE_OF_POINT_LIGHT) {
+				final float x = dataInput.readFloat();
+				final float y = dataInput.readFloat();
+				final float z = dataInput.readFloat();
+				final float distanceFalloff = dataInput.readFloat();
+				
+				return new PointLight(x, y, z, distanceFalloff);
+			}
+			
+			throw new IllegalArgumentException();
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
 }

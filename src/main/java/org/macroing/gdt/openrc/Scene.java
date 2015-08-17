@@ -18,6 +18,17 @@
  */
 package org.macroing.gdt.openrc;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -101,6 +112,46 @@ final class Scene {
 		return this.texturesAsList;
 	}
 	
+	public void write(final DataOutput dataOutput) {
+		try {
+			this.camera.write(dataOutput);
+			
+			dataOutput.writeFloat(Float.intBitsToFloat(this.texturesAsArray.length));
+			
+			for(final Texture texture : this.texturesAsList) {
+				texture.write(dataOutput);
+			}
+			
+			dataOutput.writeFloat(Float.intBitsToFloat(this.materialsAsArray.length));
+			
+			for(final Material material : this.materialsAsList) {
+				material.write(dataOutput);
+			}
+			
+			dataOutput.writeFloat(Float.intBitsToFloat(this.lightsAsArray.length));
+			
+			for(final Light light : this.lightsAsList) {
+				light.write(dataOutput);
+			}
+			
+			dataOutput.writeFloat(Float.intBitsToFloat(this.shapesAsArray.length));
+			
+			for(final Shape shape : this.shapesAsList) {
+				shape.write(dataOutput);
+			}
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+	
+	public void write(final File file) {
+		try(final DataOutputStream dataOutputStream = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) {
+			write(dataOutputStream);
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	public static Scene create() {
@@ -115,7 +166,7 @@ final class Scene {
 		
 		final int[] textureOffsets = builder.calculateTextureOffsets();
 		
-		builder.addMaterial(Material.blackPlastic().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[1]));
 		builder.addMaterial(Material.blue().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
 		builder.addMaterial(Material.brass().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[1]));
 		builder.addMaterial(Material.green().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
@@ -135,16 +186,74 @@ final class Scene {
 		}
 		
 		builder.addShape(new Plane(materialOffsets[2], 0.5F, 0.0F, 0.5F));
-		builder.addShape(new Triangle(materialOffsets[2], 2500.0F, 40.0F, 2500.0F, 1000.0F, 40.0F, 1500.0F, -1000.0F, 40.0F, -1000.0F));
+		builder.addShape(new Triangle(materialOffsets[0], 2500.0F, 40.0F, 2500.0F, 1000.0F, 40.0F, 1500.0F, -1000.0F, 40.0F, -1000.0F));
 		
 		return builder.build();
+	}
+	
+	public static Scene read(final DataInput dataInput) {
+		try {
+			final Builder builder = new Builder(Camera.read(dataInput));
+			
+			final int texturesLength = Float.floatToIntBits(dataInput.readFloat());
+			
+			for(int i = 0; i < texturesLength;) {
+				final Texture texture = Texture.read(dataInput);
+				
+				i += texture.size();
+				
+				builder.addTexture(texture);
+			}
+			
+			final int materialsLength = Float.floatToIntBits(dataInput.readFloat());
+			
+			for(int i = 0; i < materialsLength;) {
+				final Material material = Material.read(dataInput);
+				
+				i += material.size();
+				
+				builder.addMaterial(material);
+			}
+			
+			final int lightsLength = Float.floatToIntBits(dataInput.readFloat());
+			
+			for(int i = 0; i < lightsLength;) {
+				final Light light = Light.read(dataInput);
+				
+				i += light.size();
+				
+				builder.addLight(light);
+			}
+			
+			final int shapesLength = Float.floatToIntBits(dataInput.readFloat());
+			
+			for(int i = 0; i < shapesLength;) {
+				final Shape shape = Shape.read(dataInput);
+				
+				i += shape.size();
+				
+				builder.addShape(shape);
+			}
+			
+			return builder.build();
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+	
+	public static Scene read(final File file) {
+		try(final DataInputStream dataInputStream = new DataInputStream(new BufferedInputStream(new FileInputStream(file)))) {
+			return read(dataInputStream);
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	public static final class Builder {
 		private final AtomicInteger index = new AtomicInteger();
-		private final Camera camera = new Camera();
+		private final Camera camera;
 		private final List<Light> lights = new ArrayList<>();
 		private final List<Material> materials = new ArrayList<>();
 		private final List<Shape> shapes = new ArrayList<>();
@@ -153,7 +262,11 @@ final class Scene {
 		////////////////////////////////////////////////////////////////////////////////////////////////////
 		
 		public Builder() {
-			
+			this(new Camera());
+		}
+		
+		public Builder(final Camera camera) {
+			this.camera = camera;
 		}
 		
 		////////////////////////////////////////////////////////////////////////////////////////////////////

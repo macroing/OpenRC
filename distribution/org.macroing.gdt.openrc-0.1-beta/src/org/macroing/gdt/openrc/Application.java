@@ -26,7 +26,6 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferInt;
 import java.awt.image.WritableRaster;
 import java.util.List;
-import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 
 import javax.swing.JFrame;
@@ -34,56 +33,10 @@ import javax.swing.JPanel;
 
 import com.amd.aparapi.Kernel;
 import com.amd.aparapi.Range;
-import com.amd.aparapi.Kernel.EXECUTION_MODE;
 
-/**
- * This is the main class of OpenRC. This may, however, change in the future, as OpenRC matures.
- * <p>
- * OpenRC (short for Open Ray Caster) is, as its name suggests, an open source program. But it's not just any program. It's a program for rendering 3D scenes using the Ray Casting algorithm in realtime on the GPU.
- * <p>
- * Because of the name, Open Ray Caster, some of you might believe Ray Casting is the only goal with this project. This is, however, not true. Additional algorithms, such as Whitted Ray Tracing and Path Tracing, are likely to be implemented.
- * <p>
- * The program runs a portion of its code on the GPU to speed things up, as previously mentioned. It does this using OpenCL, via a Java library called Aparapi. So OpenRC is written exclusively in Java. At least for now.
- * <p>
- * Supported Features:
- * <ul>
- * <li>The Ray Casting algorithm.</li>
- * <li>Shapes such as planes, spheres and triangles.</li>
- * <li>Lights such as point lights.</li>
- * <li>Textures such as solid- and decal textures.</li>
- * <li>Texture mapping such as spherical- and triangle texture mapping.</li>
- * <li>A simple camera for walking around in the scene.</li>
- * <li>Simple materials.</li>
- * <li>Occluding shapes create shadows.</li>
- * </ul>
- * <p>
- * Supported Controls:
- * <ul>
- * <li>A - Move left.</li>
- * <li>D - Move right.</li>
- * <li>DOWN ARROW - Look down.</li>
- * <li>E - Display the current execution mode to standard output.</li>
- * <li>ESC - Exit the program. You may have to press a few times if you're using the execution mode JTP (Java Thread Pool), as it's pretty unresponsive.</li>
- * <li>F - Fire invisible bullets to make the shapes bleed.</li>
- * <li>LEFT ARROW - Look left.</li>
- * <li>RIGHT ARROW - Look right.</li>
- * <li>S - Move backward.</li>
- * <li>T - Toggle between the two execution modes GPU and JTP (Java Thread Pool).</li>
- * <li>UP ARROW - Look up.</li>
- * <li>W - Move forward.</li>
- * </ul>
- * <p>
- * Note: More supported shapes, lights, materials, textures and texture mapping algorithms may very well be added in the future. The simple camera may be updated to support walking- and looking around like in an FPS-game.
- * 
- * @since 1.0.0
- * @author J&#246;rgen Lundgren
- */
-public final class Application implements KeyListener {
-	private final AtomicBoolean isPrintingExecutionMode = new AtomicBoolean();
+abstract class Application implements KeyListener {
 	private final AtomicBoolean isRunning = new AtomicBoolean();
-	private final AtomicBoolean isTerminationRequested = new AtomicBoolean();
 	private final AtomicBoolean isTextureUpdateRequired = new AtomicBoolean();
-	private final AtomicBoolean isTogglingExecutionMode = new AtomicBoolean();
 	private final boolean[] isKeyPressed = new boolean[1024];
 	private final BufferedImage bufferedImage = new BufferedImage(Constants.WIDTH, Constants.HEIGHT, BufferedImage.TYPE_INT_RGB);
 	private final float[] pick = new float[Constants.SIZE_OF_PICK];
@@ -92,17 +45,38 @@ public final class Application implements KeyListener {
 	private final JFrame jFrame;
 	private final Kernel kernel;
 	private final Range range = Range.create(Constants.WIDTH * Constants.HEIGHT);
-	private final Scene scene = Scene.create();
+	private final Scene scene;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	public Application() {
+	protected Application(final Scene scene) {
 		this.rGB = doToRGB(this.bufferedImage);
+		this.scene = scene;
 		this.jFrame = doCreateJFrame(this.bufferedImage, this.scene.getCamera(), this.fPSCounter);
 		this.kernel = new RayCasterKernel(this.pick, this.rGB, this.scene);
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	public final boolean isKeyPressed(final int keyCode) {
+		return this.isKeyPressed[keyCode];
+	}
+	
+	public final float[] getPick() {
+		return this.pick;
+	}
+	
+	public final FPSCounter getFPSCounter() {
+		return this.fPSCounter;
+	}
+	
+	public final Kernel getKernel() {
+		return this.kernel;
+	}
+	
+	public final Scene getScene() {
+		return this.scene;
+	}
 	
 	/**
 	 * Overridden to handle key typing.
@@ -110,7 +84,7 @@ public final class Application implements KeyListener {
 	 * @param e a {@code KeyEvent}
 	 */
 	@Override
-	public void keyTyped(final KeyEvent e) {
+	public final void keyTyped(final KeyEvent e) {
 //		Do nothing here.
 	}
 	
@@ -120,7 +94,7 @@ public final class Application implements KeyListener {
 	 * @param e a {@code KeyEvent}
 	 */
 	@Override
-	public void keyPressed(final KeyEvent e) {
+	public final void keyPressed(final KeyEvent e) {
 		this.isKeyPressed[e.getKeyCode()] = true;
 	}
 	
@@ -130,14 +104,18 @@ public final class Application implements KeyListener {
 	 * @param e a {@code KeyEvent}
 	 */
 	@Override
-	public void keyReleased(final KeyEvent e) {
+	public final void keyReleased(final KeyEvent e) {
 		this.isKeyPressed[e.getKeyCode()] = false;
+	}
+	
+	public final void setTextureUpdateRequired(final boolean isTextureUpdateRequired) {
+		this.isTextureUpdateRequired.set(isTextureUpdateRequired);
 	}
 	
 	/**
 	 * Called to start the application.
 	 */
-	public void start() {
+	public final void start() {
 //		Add a shutdown hook that stops the execution and subsequently disposes of any resources:
 		Runtime.getRuntime().addShutdownHook(new Thread(() -> this.isRunning.set(false)));
 		
@@ -149,7 +127,10 @@ public final class Application implements KeyListener {
 		
 		while(this.isRunning.get()) {
 //			Update the current frame:
-			doUpdate();
+			update();
+			
+//			Perform View Frustum Culling:
+			doPerformFrustumCulling();
 			
 //			Tell the API to fetch the camera values before executing this Kernel instance (it will be transferred to the GPU every cycle):
 			this.kernel.put(this.scene.getCamera().getArray());
@@ -184,18 +165,7 @@ public final class Application implements KeyListener {
 		this.jFrame.dispose();
 	}
 	
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	
-	/**
-	 * The entry-point of this application.
-	 * 
-	 * @param args these are not used
-	 */
-	public static void main(final String[] args) {
-		final
-		Application application = SwingUtilities2.runInEDT(() -> new Application());
-		application.start();
-	}
+	public abstract void update();
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
@@ -209,96 +179,6 @@ public final class Application implements KeyListener {
 		for(int i = 0; i < shapeIndices.length; i++) {
 			shapeIndices[i] = shapes.get(i).getIndex();
 		}
-	}
-	
-	private void doUpdate() {
-//		Calculate the movement based on some velocity, calculated as the distance moved per second:
-		final float velocity = 250.0F;
-		final float movement = this.fPSCounter.getFrameTimeMillis() / 1000.0F * velocity;
-		
-		final Camera camera = this.scene.getCamera();
-		
-		if(this.isKeyPressed[KeyEvent.VK_A]) {
-			camera.move(-movement, 0.0F, movement);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_D]) {
-			camera.move(movement, 0.0F, -movement);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_DOWN]) {
-			camera.look(0.0F, movement, 0.0F);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_E] && this.isPrintingExecutionMode.compareAndSet(false, true)) {
-			System.out.printf("ExecutionMode: %s%n", this.kernel.getExecutionMode());
-		} else if(!this.isKeyPressed[KeyEvent.VK_E]) {
-			this.isPrintingExecutionMode.compareAndSet(true, false);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_ESCAPE] && this.isTerminationRequested.compareAndSet(false, true)) {
-			this.isRunning.set(false);
-		} else if(!this.isKeyPressed[KeyEvent.VK_ESCAPE]) {
-			this.isTerminationRequested.compareAndSet(true, false);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_F]) {
-			final int textureOffset = (int)(this.pick[Constants.RELATIVE_OFFSET_OF_PICK_TEXTURE_OFFSET]);
-			final int textureU = (int)(this.pick[Constants.RELATIVE_OFFSET_OF_PICK_TEXTURE_UV + 0]);
-			final int textureV = (int)(this.pick[Constants.RELATIVE_OFFSET_OF_PICK_TEXTURE_UV + 1]);
-			
-			final int[] textures = this.scene.getTexturesAsArray();
-			
-			final int width = textures[textureOffset + Texture.RELATIVE_OFFSET_OF_TEXTURE_WIDTH];
-			final int startX = textureU - 5;
-			final int startY = textureV - 5;
-			final int radius = 2;
-			
-			for(int y = -radius; y <= radius; y++) {
-				for(int x = -radius; x <= radius; x++) {
-					if(x * x + y * y <= radius * radius) {
-						if(ThreadLocalRandom.current().nextGaussian() < 0.1D) {
-							final int rGB = ((ThreadLocalRandom.current().nextInt(100, 255) & 0xFF) << 16) | ((0 & 0xFF) << 8) | ((0 & 0xFF) << 0);
-							
-							final int offset = (startY + y) * width + (startX + x);
-							
-							textures[textureOffset + Texture.RELATIVE_OFFSET_OF_TEXTURE_DATA + offset] = rGB;
-						}
-					}
-				}
-			}
-			
-			this.isTextureUpdateRequired.set(true);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_LEFT]) {
-			camera.look(-movement, 0.0F, movement);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_RIGHT]) {
-			camera.look(movement, 0.0F, -movement);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_S]) {
-			camera.move(movement, 0.0F, movement);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_T] && this.isTogglingExecutionMode.compareAndSet(false, true)) {
-			this.kernel.setExecutionMode(this.kernel.getExecutionMode() == EXECUTION_MODE.GPU ? EXECUTION_MODE.JTP : EXECUTION_MODE.GPU);
-		} else if(!this.isKeyPressed[KeyEvent.VK_T]) {
-			this.isTogglingExecutionMode.compareAndSet(true, false);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_UP]) {
-			camera.look(0.0F, -movement, 0.0F);
-		}
-		
-		if(this.isKeyPressed[KeyEvent.VK_W]) {
-			camera.move(-movement, 0.0F, -movement);
-		}
-		
-//		Perform View Frustum Culling:
-		doPerformFrustumCulling();
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////

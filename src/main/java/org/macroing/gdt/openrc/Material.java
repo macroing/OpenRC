@@ -18,6 +18,11 @@
  */
 package org.macroing.gdt.openrc;
 
+import java.io.DataInput;
+import java.io.DataOutput;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
 final class Material {
 	public static final int RELATIVE_OFFSET_OF_AMBIENT_COLOR = 1;
 	public static final int RELATIVE_OFFSET_OF_AMBIENT_INTENSITY = 5;
@@ -257,6 +262,33 @@ final class Material {
 		return this;
 	}
 	
+	public void write(final DataOutput dataOutput) {
+		try {
+			dataOutput.writeFloat(getAmbientColorR());
+			dataOutput.writeFloat(getAmbientColorG());
+			dataOutput.writeFloat(getAmbientColorB());
+			dataOutput.writeFloat(getAmbientIntensity());
+			dataOutput.writeFloat(getDiffuseColorR());
+			dataOutput.writeFloat(getDiffuseColorG());
+			dataOutput.writeFloat(getDiffuseColorB());
+			dataOutput.writeFloat(getDiffuseIntensity());
+			dataOutput.writeFloat(getSpecularColorR());
+			dataOutput.writeFloat(getSpecularColorG());
+			dataOutput.writeFloat(getSpecularColorB());
+			dataOutput.writeFloat(getSpecularIntensity());
+			dataOutput.writeFloat(getSpecularPower());
+			dataOutput.writeFloat(getReflection());
+			dataOutput.writeFloat(getRefraction());
+			dataOutput.writeFloat(Float.intBitsToFloat(this.textureOffsets.length));
+			
+			for(int i = 0; i < this.textureOffsets.length; i++) {
+				dataOutput.writeFloat(this.textureOffsets[i]);
+			}
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	public static Material blackPlastic() {
@@ -271,6 +303,7 @@ final class Material {
 	}
 	
 	public static Material blue() {
+		final
 		Material material = new Material();
 		material.setDiffuseColor(8.0F / 255.0F, 8.0F / 255.0F, 64.0F / 255.0F);
 		material.setReflection(0.3F);
@@ -280,6 +313,7 @@ final class Material {
 	}
 	
 	public static Material brass() {
+		final
 		Material material = new Material();
 		material.setAmbientColor(0.329412F, 0.223529F, 0.027451F);
 		material.setDiffuseColor(0.780392F, 0.568627F, 0.113725F);
@@ -290,6 +324,7 @@ final class Material {
 	}
 	
 	public static Material green() {
+		final
 		Material material = new Material();
 		material.setDiffuseColor(8.0F / 255.0F, 64.0F / 255.0F, 8.0F / 255.0F);
 		material.setReflection(0.3F);
@@ -299,6 +334,7 @@ final class Material {
 	}
 	
 	public static Material obsidian() {
+		final
 		Material material = new Material();
 		material.setAmbientColor(0.05375F, 0.05F, 0.06625F, 0.82F);
 		material.setDiffuseColor(0.18275F, 0.17F, 0.22525F, 0.82F);
@@ -309,7 +345,38 @@ final class Material {
 		return material;
 	}
 	
+	public static Material read(final DataInput dataInput) {
+		try {
+			final
+			Material material = new Material();
+			material.setAmbientColor(dataInput.readFloat(), dataInput.readFloat(), dataInput.readFloat());
+			material.setAmbientIntensity(dataInput.readFloat());
+			material.setDiffuseColor(dataInput.readFloat(), dataInput.readFloat(), dataInput.readFloat());
+			material.setDiffuseIntensity(dataInput.readFloat());
+			material.setSpecularColor(dataInput.readFloat(), dataInput.readFloat(), dataInput.readFloat());
+			material.setSpecularIntensity(dataInput.readFloat());
+			material.setSpecularPower(dataInput.readFloat());
+			material.setReflection(dataInput.readFloat());
+			material.setRefraction(dataInput.readFloat());
+			
+			final int textureOffsetsLength = Float.floatToIntBits(dataInput.readFloat());
+			
+			final float[] textureOffsets = new float[textureOffsetsLength];
+			
+			for(int i = 0; i < textureOffsets.length; i++) {
+				textureOffsets[i] = dataInput.readFloat();
+			}
+			
+			material.setTextureOffsets(textureOffsets);
+			
+			return material;
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+	
 	public static Material red() {
+		final
 		Material material = new Material();
 		material.setDiffuseColor(64.0F / 255.0F, 8.0F / 255.0F, 8.0F / 255.0F);
 		material.setReflection(0.3F);

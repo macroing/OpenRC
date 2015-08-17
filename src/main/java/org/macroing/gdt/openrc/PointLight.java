@@ -18,6 +18,10 @@
  */
 package org.macroing.gdt.openrc;
 
+import java.io.DataOutput;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
 final class PointLight implements Light {
 	public static final float TYPE_POINT_LIGHT = 1.0F;
 	public static final int RELATIVE_OFFSET_OF_POINT_LIGHT_DISTANCE_FALLOFF = 5;
@@ -62,5 +66,19 @@ final class PointLight implements Light {
 	@Override
 	public int size() {
 		return SIZE_OF_POINT_LIGHT;
+	}
+	
+	@Override
+	public void write(final DataOutput dataOutput) {
+		try {
+			dataOutput.writeFloat(getType());
+			dataOutput.writeFloat(size());
+			dataOutput.writeFloat(this.x);
+			dataOutput.writeFloat(this.y);
+			dataOutput.writeFloat(this.z);
+			dataOutput.writeFloat(this.distanceFalloff);
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 }

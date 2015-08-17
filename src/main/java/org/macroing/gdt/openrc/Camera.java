@@ -18,6 +18,18 @@
  */
 package org.macroing.gdt.openrc;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInput;
+import java.io.DataInputStream;
+import java.io.DataOutput;
+import java.io.DataOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
 /**
  * The values in the {@code float} array {@code array} consists of the following:
  * <ol>
@@ -155,6 +167,11 @@ final class Camera {
 		return this.array;
 	}
 	
+	@Override
+	public String toString() {
+		return String.format("Camera: [Eye=%s,%s,%s], [Up=%s,%s,%s], [LookAt=%s,%s,%s], [OrthoNormalBasisU=%s,%s,%s], [OrthoNormalBasisV=%s,%s,%s], [OrthoNormalBasisW=%s,%s,%s], [ViewPlaneDistance=%s]", Float.toString(getEyeX()), Float.toString(getEyeY()), Float.toString(getEyeZ()), Float.toString(getUpX()), Float.toString(getUpY()), Float.toString(getUpZ()), Float.toString(getLookAtX()), Float.toString(getLookAtY()), Float.toString(getLookAtZ()), Float.toString(getOrthoNormalBasisUX()), Float.toString(getOrthoNormalBasisUY()), Float.toString(getOrthoNormalBasisUZ()), Float.toString(getOrthoNormalBasisVX()), Float.toString(getOrthoNormalBasisVY()), Float.toString(getOrthoNormalBasisVZ()), Float.toString(getOrthoNormalBasisWX()), Float.toString(getOrthoNormalBasisWY()), Float.toString(getOrthoNormalBasisWZ()), Float.toString(getViewPlaneDistance()));
+	}
+	
 	public void calculateOrthonormalBasis() {
 		Vector.subtract(this.array, ABSOLUTE_OFFSET_OF_CAMERA_EYE, this.array, ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W);
 		Vector.normalize(this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W);
@@ -203,5 +220,56 @@ final class Camera {
 	
 	public void setViewPlaneDistance(final float distance) {
 		this.array[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE] = distance;
+	}
+	
+	public void write(final DataOutput dataOutput) {
+		try {
+			dataOutput.writeFloat(getEyeX());
+			dataOutput.writeFloat(getEyeY());
+			dataOutput.writeFloat(getEyeZ());
+			dataOutput.writeFloat(getUpX());
+			dataOutput.writeFloat(getUpY());
+			dataOutput.writeFloat(getUpZ());
+			dataOutput.writeFloat(getLookAtX());
+			dataOutput.writeFloat(getLookAtY());
+			dataOutput.writeFloat(getLookAtZ());
+			dataOutput.writeFloat(getViewPlaneDistance());
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+	
+	public void write(final File file) {
+		try(final DataOutputStream dataOutputStream = new DataOutputStream(new BufferedOutputStream(new FileOutputStream(file)))) {
+			write(dataOutputStream);
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+	
+	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	public static Camera read(final DataInput dataInput) {
+		try {
+			final
+			Camera camera = new Camera();
+			camera.setEye(dataInput.readFloat(), dataInput.readFloat(), dataInput.readFloat());
+			camera.setUp(dataInput.readFloat(), dataInput.readFloat(), dataInput.readFloat());
+			camera.setLookAt(dataInput.readFloat(), dataInput.readFloat(), dataInput.readFloat());
+			camera.setViewPlaneDistance(dataInput.readFloat());
+			camera.calculateOrthonormalBasis();
+			
+			return camera;
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+	
+	public static Camera read(final File file) {
+		try(final DataInputStream dataInputStream = new DataInputStream(new BufferedInputStream(new FileInputStream(file)))) {
+			return read(dataInputStream);
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 }

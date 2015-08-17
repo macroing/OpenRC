@@ -18,6 +18,10 @@
  */
 package org.macroing.gdt.openrc;
 
+import java.io.DataOutput;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
 final class Triangle extends Shape {
 	public static final float TYPE = 3.0F;
 	public static final int RELATIVE_OFFSET_OF_TRIANGLE_A = 3;
@@ -62,6 +66,23 @@ final class Triangle extends Shape {
 		this.surfaceNormalZ = surfaceNormal[2];
 	}
 	
+	public Triangle(final float materialOffset, final float aX, final float aY, final float aZ, final float bX, final float bY, final float bZ, final float cX, final float cY, final float cZ, final float surfaceNormalX, final float surfaceNormalY, final float surfaceNormalZ) {
+		super(materialOffset);
+		
+		this.aX = aX;
+		this.aY = aY;
+		this.aZ = aZ;
+		this.bX = bX;
+		this.bY = bY;
+		this.bZ = bZ;
+		this.cX = cX;
+		this.cY = cY;
+		this.cZ = cZ;
+		this.surfaceNormalX = surfaceNormalX;
+		this.surfaceNormalY = surfaceNormalY;
+		this.surfaceNormalZ = surfaceNormalZ;
+	}
+	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	@Override
@@ -93,6 +114,29 @@ final class Triangle extends Shape {
 	@Override
 	public int size() {
 		return SIZE_OF_TRIANGLE;
+	}
+	
+	@Override
+	public void write(final DataOutput dataOutput) {
+		try {
+			dataOutput.writeFloat(getType());
+			dataOutput.writeFloat(size());
+			dataOutput.writeFloat(getMaterialOffset());
+			dataOutput.writeFloat(this.aX);
+			dataOutput.writeFloat(this.aY);
+			dataOutput.writeFloat(this.aZ);
+			dataOutput.writeFloat(this.bX);
+			dataOutput.writeFloat(this.bY);
+			dataOutput.writeFloat(this.bZ);
+			dataOutput.writeFloat(this.cX);
+			dataOutput.writeFloat(this.cY);
+			dataOutput.writeFloat(this.cZ);
+			dataOutput.writeFloat(this.surfaceNormalX);
+			dataOutput.writeFloat(this.surfaceNormalY);
+			dataOutput.writeFloat(this.surfaceNormalZ);
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////

@@ -24,6 +24,8 @@ import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferInt;
 import java.awt.image.WritableRaster;
 import java.io.BufferedInputStream;
+import java.io.DataInput;
+import java.io.DataOutput;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.UncheckedIOException;
@@ -96,6 +98,21 @@ final class Texture {
 		return array;
 	}
 	
+	public void write(final DataOutput dataOutput) {
+		try {
+			dataOutput.writeInt(getType());
+			dataOutput.writeInt(size());
+			dataOutput.writeInt(getWidth());
+			dataOutput.writeInt(getHeight());
+			
+			for(int i = 0; i < this.data.length; i++) {
+				dataOutput.writeInt(this.data[i]);
+			}
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
+	}
+	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	public static Texture createDecalTexture() {
@@ -127,6 +144,25 @@ final class Texture {
 			return createSolidTexture(Texture.class.getResourceAsStream(name));
 		} catch(final Exception e) {
 			return Texture.createSolidTexture();
+		}
+	}
+	
+	public static Texture read(final DataInput dataInput) {
+		try {
+			final int type = dataInput.readInt();
+			final int size = dataInput.readInt();
+			final int width = dataInput.readInt();
+			final int height = dataInput.readInt();
+			
+			final int[] data = new int[size - 4];
+			
+			for(int i = 0; i < data.length; i++) {
+				data[i] = dataInput.readInt();
+			}
+			
+			return new Texture(width, height, type, data);
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
 		}
 	}
 	

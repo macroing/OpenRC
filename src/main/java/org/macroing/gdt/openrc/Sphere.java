@@ -18,16 +18,16 @@
  */
 package org.macroing.gdt.openrc;
 
+import java.io.DataOutput;
+import java.io.IOException;
+import java.io.UncheckedIOException;
 import java.util.concurrent.ThreadLocalRandom;
 
 final class Sphere extends Shape {
 	public static final float TYPE = 1.0F;
 	public static final int RELATIVE_OFFSET_OF_SPHERE_POSITION = 3;
 	public static final int RELATIVE_OFFSET_OF_SPHERE_RADIUS = 6;
-	
-	////////////////////////////////////////////////////////////////////////////////////////////////////
-	
-	private static final int SIZE_OF_SPHERE = 1 + 1 + 1 + 3 + 1;
+	public static final int SIZE_OF_SPHERE = 1 + 1 + 1 + 3 + 1;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
@@ -72,6 +72,21 @@ final class Sphere extends Shape {
 	@Override
 	public int size() {
 		return SIZE_OF_SPHERE;
+	}
+	
+	@Override
+	public void write(final DataOutput dataOutput) {
+		try {
+			dataOutput.writeFloat(getType());
+			dataOutput.writeFloat(size());
+			dataOutput.writeFloat(getMaterialOffset());
+			dataOutput.writeFloat(this.x);
+			dataOutput.writeFloat(this.y);
+			dataOutput.writeFloat(this.z);
+			dataOutput.writeFloat(this.radius);
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////

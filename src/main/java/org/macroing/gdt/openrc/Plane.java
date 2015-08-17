@@ -18,6 +18,10 @@
  */
 package org.macroing.gdt.openrc;
 
+import java.io.DataOutput;
+import java.io.IOException;
+import java.io.UncheckedIOException;
+
 final class Plane extends Shape {
 	public static final float TYPE = 2.0F;
 	public static final int RELATIVE_OFFSET_OF_PLANE_SURFACE_NORMAL = 3;
@@ -61,5 +65,19 @@ final class Plane extends Shape {
 	@Override
 	public int size() {
 		return SIZE_OF_PLANE;
+	}
+	
+	@Override
+	public void write(final DataOutput dataOutput) {
+		try {
+			dataOutput.writeFloat(getType());
+			dataOutput.writeFloat(size());
+			dataOutput.writeFloat(getMaterialOffset());
+			dataOutput.writeFloat(this.surfaceNormalX);
+			dataOutput.writeFloat(this.surfaceNormalY);
+			dataOutput.writeFloat(this.surfaceNormalZ);
+		} catch(final IOException e) {
+			throw new UncheckedIOException(e);
+		}
 	}
 }
