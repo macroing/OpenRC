@@ -3,7 +3,6 @@ bl_info = {
     "author": "Martin Sandgren <carlmartus@gmail.com>",
     "version": (0, 1),
     "blender": (2, 72, 0),
-    "location": "Tool bar > Animation tab > AnimAll",
     "description": "Exports the scene to a OpenRC readable format. Exported file will"
         "be placed in same folder as the active blender on disk",
     "warning": "",
