@@ -23,6 +23,7 @@ import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.RenderingHints;
 import java.awt.image.BufferedImage;
+import java.util.function.Consumer;
 
 import javax.swing.JPanel;
 
@@ -33,13 +34,15 @@ final class JBufferedImagePanel extends JPanel {
 	
 	private final BufferedImage bufferedImage;
 	private final Camera camera;
+	private final Consumer<Graphics2D> consumer;
 	private final FPSCounter fPSCounter;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	public JBufferedImagePanel(final BufferedImage bufferedImage, final Camera camera, final FPSCounter fPSCounter) {
+	public JBufferedImagePanel(final BufferedImage bufferedImage, final Camera camera, final Consumer<Graphics2D> consumer, final FPSCounter fPSCounter) {
 		this.bufferedImage = bufferedImage;
 		this.camera = camera;
+		this.consumer = consumer;
 		this.fPSCounter = fPSCounter;
 	}
 	
@@ -55,6 +58,9 @@ final class JBufferedImagePanel extends JPanel {
 		graphics2D.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 		graphics2D.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
 		graphics2D.drawImage(this.bufferedImage, 0, 0, this.bufferedImage.getWidth(), this.bufferedImage.getHeight(), this);
+		
+		this.consumer.accept(graphics2D);
+		
 		graphics2D.setColor(Color.BLACK);
 		graphics2D.fillRect(10, 10, graphics2D.getFontMetrics().stringWidth(string) + 20, graphics2D.getFontMetrics().getHeight() + 20);
 		graphics2D.setColor(Color.WHITE);

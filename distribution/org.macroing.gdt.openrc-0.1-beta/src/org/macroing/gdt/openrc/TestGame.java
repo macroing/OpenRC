@@ -18,6 +18,7 @@
  */
 package org.macroing.gdt.openrc;
 
+import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.util.concurrent.ThreadLocalRandom;
@@ -80,6 +81,11 @@ public final class TestGame extends Application {
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
+	
+	@Override
+	public void render(final Graphics2D graphics2D) {
+//		Do nothing.
+	}
 	
 	@Override
 	public void update() {

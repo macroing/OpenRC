@@ -19,6 +19,7 @@
 package org.macroing.gdt.openrc;
 
 import java.awt.Dimension;
+import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
 import java.awt.image.BufferedImage;
@@ -27,6 +28,7 @@ import java.awt.image.DataBufferInt;
 import java.awt.image.WritableRaster;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.function.Consumer;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
@@ -52,7 +54,7 @@ abstract class Application implements KeyListener {
 	protected Application(final Scene scene) {
 		this.rGB = doToRGB(this.bufferedImage);
 		this.scene = scene;
-		this.jFrame = doCreateJFrame(this.bufferedImage, this.scene.getCamera(), this.fPSCounter);
+		this.jFrame = doCreateJFrame(this.bufferedImage, this.scene.getCamera(), this::render, this.fPSCounter);
 		this.kernel = new RayCasterKernel(this.pick, this.rGB, this.scene);
 	}
 	
@@ -111,6 +113,8 @@ abstract class Application implements KeyListener {
 	public final void setTextureUpdateRequired(final boolean isTextureUpdateRequired) {
 		this.isTextureUpdateRequired.set(isTextureUpdateRequired);
 	}
+	
+	public abstract void render(final Graphics2D graphics2D);
 	
 	/**
 	 * Called to start the application.
@@ -195,10 +199,10 @@ abstract class Application implements KeyListener {
 		return rGB;
 	}
 	
-	private static JFrame doCreateJFrame(final BufferedImage bufferedImage, final Camera camera, final FPSCounter fPSCounter) {
+	private static JFrame doCreateJFrame(final BufferedImage bufferedImage, final Camera camera, final Consumer<Graphics2D> consumer, final FPSCounter fPSCounter) {
 		final
 		JFrame jFrame = new JFrame();
-		jFrame.setContentPane(doCreateJPanel(bufferedImage, camera, fPSCounter));
+		jFrame.setContentPane(doCreateJPanel(bufferedImage, camera, consumer, fPSCounter));
 		jFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		jFrame.setFocusTraversalKeysEnabled(false);
 		jFrame.setIgnoreRepaint(true);
@@ -212,9 +216,9 @@ abstract class Application implements KeyListener {
 		return jFrame;
 	}
 	
-	private static JPanel doCreateJPanel(final BufferedImage bufferedImage, final Camera camera, final FPSCounter fPSCounter) {
+	private static JPanel doCreateJPanel(final BufferedImage bufferedImage, final Camera camera, final Consumer<Graphics2D> consumer, final FPSCounter fPSCounter) {
 		final
-		JPanel jPanel = new JBufferedImagePanel(bufferedImage, camera, fPSCounter);
+		JPanel jPanel = new JBufferedImagePanel(bufferedImage, camera, consumer, fPSCounter);
 		jPanel.setLayout(new AbsoluteLayoutManager());
 		jPanel.setPreferredSize(new Dimension(bufferedImage.getWidth(), bufferedImage.getHeight()));
 		
