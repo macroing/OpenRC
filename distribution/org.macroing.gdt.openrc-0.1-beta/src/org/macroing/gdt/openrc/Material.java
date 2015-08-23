@@ -58,7 +58,7 @@ final class Material {
 	private float specularColorB = 255.0F / 255.0F;
 	private float specularColorG = 255.0F / 255.0F;
 	private float specularColorR = 255.0F / 255.0F;
-	private float specularIntensity = 3.0F;
+	private float specularIntensity = 1.0F;
 	private float specularPower = 5.0F;
 	private float[] textureOffsets = new float[0];
 	

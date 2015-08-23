@@ -46,6 +46,7 @@ import com.amd.aparapi.Kernel.EXECUTION_MODE;
  * <li>Simple materials.</li>
  * <li>Occluding shapes create shadows.</li>
  * <li>Simple collision detection.</li>
+ * <li>Simple tone mapping and gamma correction.</li>
  * </ul>
  * <p>
  * Supported Controls:

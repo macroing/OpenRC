@@ -21,6 +21,7 @@ Supported Features
 * Simple materials.
 * Occluding shapes create shadows.
 * Simple collision detection.
+* Simple tone mapping and gamma correction.
 
 **Note** More supported shapes, lights, materials, textures and texture mapping algorithms may very well be added in the future.
 

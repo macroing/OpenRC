@@ -21,22 +21,19 @@ Supported Features
 * Simple materials.
 * Occluding shapes create shadows.
 * Simple collision detection.
+* Simple tone mapping and gamma correction.
 
-**Note** More supported shapes, lights, materials, textures and texture mapping algorithms may very well be added in the future. The simple camera may be updated to support walking- and looking around like in an FPS-game.
+**Note** More supported shapes, lights, materials, textures and texture mapping algorithms may very well be added in the future.
 
 Supported Controls
 ------------------
 * Press 'A' to move left.
 * Press 'D' to move right.
-* Press 'DOWN ARROW' to look down.
 * Press 'E' to display the current execution mode (GPU or JTP*).
 * Press 'ESC' to exit.
 * Press 'F' to fire invisible bullets to make the shapes bleed.
-* Press 'LEFT ARROW' to look left.
-* Press 'RIGHT ARROW' to look right.
 * Press 'S' to move backward.
 * Press 'T' to toggle between the GPU- and JTP* execution modes.
-* Press 'UP ARROW' to look up.
 * Press 'W' to move forward.
 * Use your mouse to look around.
 

@@ -179,7 +179,7 @@ final class Scene {
 //		builder.addMaterial(new Material().setAmbientColor(0.0F, 0.0F, 0.0F).setDiffuseColor(0.0F, 0.0F, 0.0F).setSpecularColor(1.0F, 1.0F, 1.0F).setSpecularPower(32.0F).setTextureOffsets(0));
 		
 		builder.addLight(new PointLight(400.0F, -20.0F, 400.0F, 100.0F));
-		builder.addLight(new PointLight(600.0F, 20.0F, 600.0F, 100.0F));
+//		builder.addLight(new PointLight(600.0F, 20.0F, 600.0F, 100.0F));
 //		builder.addLight(new PointLight(600.0F, 20.0F, 400.0F, 100.0F));
 //		builder.addLight(new PointLight(400.0F, 20.0F, 600.0F, 100.0F));
 		

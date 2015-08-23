@@ -690,7 +690,20 @@ abstract class AbstractRayCasterKernel extends Kernel {
 			b *= maximumComponentValueReciprocal;
 		}
 		
-//		Scale the color from [0-1) to [0-256):
+//		Calculate the reciprocal of the gamma:
+		final float gammaReciprocal = 1.0F / 2.2F;
+		
+//		Perform gamma correction on the RGB-components:
+		r = pow(r, gammaReciprocal);
+		g = pow(g, gammaReciprocal);
+		b = pow(b, gammaReciprocal);
+		
+//		Clamp the RGB-components to the range [0.0, 1.0):
+		r = r < 0.0F ? 0.0F : r > 1.0F ? 1.0F : r;
+		g = g < 0.0F ? 0.0F : g > 1.0F ? 1.0F : g;
+		b = b < 0.0F ? 0.0F : b > 1.0F ? 1.0F : b;
+		
+//		Scale the RGB-components from [0.0, 1.0) to [0.0, 256.0) and convert them to integers:
 		final int scaledR = (int)(r * 255.0F);
 		final int scaledG = (int)(g * 255.0F);
 		final int scaledB = (int)(b * 255.0F);
