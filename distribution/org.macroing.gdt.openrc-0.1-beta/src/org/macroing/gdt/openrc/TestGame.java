@@ -51,15 +51,12 @@ import com.amd.aparapi.Kernel.EXECUTION_MODE;
  * <ul>
  * <li>A - Move left.</li>
  * <li>D - Move right.</li>
- * <li>DOWN ARROW - Look down.</li>
  * <li>E - Display the current execution mode to standard output.</li>
  * <li>ESC - Exit the program. You may have to press a few times if you're using the execution mode JTP (Java Thread Pool), as it's pretty unresponsive.</li>
  * <li>F - Fire invisible bullets to make the shapes bleed.</li>
- * <li>LEFT ARROW - Look left.</li>
- * <li>RIGHT ARROW - Look right.</li>
+ * <li>MOUSE - Look around.</li>
  * <li>S - Move backward.</li>
  * <li>T - Toggle between the two execution modes GPU and JTP (Java Thread Pool).</li>
- * <li>UP ARROW - Look up.</li>
  * <li>W - Move forward.</li>
  * </ul>
  * <p>
@@ -95,16 +92,15 @@ public final class TestGame extends Application {
 		
 		final Camera camera = getScene().getCamera();
 		
+		camera.lookDown(-getMouseUpAndReset() * 0.005F);
+		camera.rotateY(-getMouseLeftAndReset() * 0.005F);
+		
 		if(isKeyPressed(KeyEvent.VK_A)) {
-			camera.move(-movement, 0.0F, movement);
+			camera.moveLeft(movement);
 		}
 		
 		if(isKeyPressed(KeyEvent.VK_D)) {
-			camera.move(movement, 0.0F, -movement);
-		}
-		
-		if(isKeyPressed(KeyEvent.VK_DOWN)) {
-			camera.look(0.0F, movement, 0.0F);
+			camera.moveLeft(-movement);
 		}
 		
 		if(isKeyPressed(KeyEvent.VK_E) && this.isPrintingExecutionMode.compareAndSet(false, true)) {
@@ -115,6 +111,8 @@ public final class TestGame extends Application {
 		
 		if(isKeyPressed(KeyEvent.VK_ESCAPE) && this.isTerminationRequested.compareAndSet(false, true)) {
 			this.isRunning.set(false);
+			
+			System.exit(0);
 		} else if(!isKeyPressed(KeyEvent.VK_ESCAPE)) {
 			this.isTerminationRequested.compareAndSet(true, false);
 		}
@@ -148,16 +146,8 @@ public final class TestGame extends Application {
 			setTextureUpdateRequired(true);
 		}
 		
-		if(isKeyPressed(KeyEvent.VK_LEFT)) {
-			camera.look(-movement, 0.0F, movement);
-		}
-		
-		if(isKeyPressed(KeyEvent.VK_RIGHT)) {
-			camera.look(movement, 0.0F, -movement);
-		}
-		
 		if(isKeyPressed(KeyEvent.VK_S)) {
-			camera.move(movement, 0.0F, movement);
+			camera.moveBackward(-movement);
 		}
 		
 		if(isKeyPressed(KeyEvent.VK_T) && this.isTogglingExecutionMode.compareAndSet(false, true)) {
@@ -166,12 +156,8 @@ public final class TestGame extends Application {
 			this.isTogglingExecutionMode.compareAndSet(true, false);
 		}
 		
-		if(isKeyPressed(KeyEvent.VK_UP)) {
-			camera.look(0.0F, -movement, 0.0F);
-		}
-		
 		if(isKeyPressed(KeyEvent.VK_W)) {
-			camera.move(-movement, 0.0F, -movement);
+			camera.moveBackward(movement);
 		}
 	}
 	

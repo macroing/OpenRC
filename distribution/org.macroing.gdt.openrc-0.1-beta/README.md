@@ -37,6 +37,7 @@ Supported Controls
 * Press 'T' to toggle between the GPU- and JTP* execution modes.
 * Press 'UP ARROW' to look up.
 * Press 'W' to move forward.
+* Use your mouse to look around.
 
 **Note** When running with the execution mode JTP*, you may have to press more than once, as it may be very unresponsive, because everything is running in the CPU.
 
@@ -59,11 +60,8 @@ This list contains some of the features and improvements that are likely to come
 * Add texture mapping to planes.
 * Add vertex colors to triangles for shading with gradients.
 * Add view frustum culling. It has been started on.
-* Add scene loading from binary files.
-* Add a scene description language to "compile" to the binary files.
 * Add a bounding volume hierarchy (BVH) to the scene.
 * Add anti-aliasing.
-* Fix the camera, so it works like the camera in FPS-games.
 
 Dependencies
 ------------

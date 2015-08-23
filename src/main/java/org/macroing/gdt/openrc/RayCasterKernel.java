@@ -96,9 +96,13 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		final int pixelOffset = index * Constants.SIZE_OF_PIXEL;
 		final int rayOffset = index * Constants.SIZE_OF_RAY;
 		
+//		Initialize zoom factor and zoom factor reciprocal:
+		final float zoom = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ZOOM];
+		final float zoomReciprocal = 1.0F / zoom;
+		
 //		Initialize the U- and V-coordinates:
-		final float u = index % this.width - this.width / 2.0F + 0.5F;
-		final float v = index / this.width - this.height / 2.0F + 0.5F;
+		final float u = (index % this.width - this.width / 2.0F + 0.5F) * zoomReciprocal;
+		final float v = (index / this.width - this.height / 2.0F + 0.5F) * zoomReciprocal;
 		
 //		Initialize the pick update state:
 		final boolean isUpdatingPick = index == pickIndex;

@@ -18,6 +18,10 @@
  */
 package org.macroing.gdt.openrc;
 
+import static org.macroing.gdt.openrc.Mathematics.cos;
+import static org.macroing.gdt.openrc.Mathematics.sin;
+import static org.macroing.gdt.openrc.Mathematics.sqrt;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.DataInput;
@@ -69,7 +73,8 @@ final class Camera {
 	public static final int ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W = 15;
 	public static final int ABSOLUTE_OFFSET_OF_CAMERA_UP = 3;
 	public static final int ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE = 18;
-	public static final int SIZE_OF_CAMERA = 3 + 3 + 3 + 3 + 3 + 3 + 1;
+	public static final int ABSOLUTE_OFFSET_OF_CAMERA_ZOOM = 19;
+	public static final int SIZE_OF_CAMERA = 3 + 3 + 3 + 3 + 3 + 3 + 1 + 1;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
@@ -82,6 +87,7 @@ final class Camera {
 		setUp(0.0F, 1.0F, 0.0F);
 		setLookAt(0.0F, 0.0F, 0.0F);
 		setViewPlaneDistance(800.0F);
+		setZoom(1.0F);
 		calculateOrthonormalBasis();
 	}
 	
@@ -109,18 +115,6 @@ final class Camera {
 	
 	public float getLookAtZ() {
 		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2];
-	}
-	
-	public float getUpX() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP + 0];
-	}
-	
-	public float getUpY() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP + 1];
-	}
-	
-	public float getUpZ() {
-		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP + 2];
 	}
 	
 	public float getOrthoNormalBasisUX() {
@@ -159,8 +153,24 @@ final class Camera {
 		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W + 2];
 	}
 	
+	public float getUpX() {
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP + 0];
+	}
+	
+	public float getUpY() {
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP + 1];
+	}
+	
+	public float getUpZ() {
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP + 2];
+	}
+	
 	public float getViewPlaneDistance() {
 		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE];
+	}
+	
+	public float getZoom() {
+		return this.array[ABSOLUTE_OFFSET_OF_CAMERA_ZOOM];
 	}
 	
 	public float[] getArray() {
@@ -180,22 +190,128 @@ final class Camera {
 		Vector.crossProduct(this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U, this.array, ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V);
 	}
 	
-	public void look(final float x, final float y, final float z) {
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0] += x;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1] += y;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2] += z;
+	public void lookDown(final float distance) {
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1] += distance;
 		
 		calculateOrthonormalBasis();
 	}
 	
-	public void move(final float x, final float y, final float z) {
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0] += x;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1] += y;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2] += z;
+	public void moveBackward(final float distance) {
+		final float eyeX = this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0];
+		final float eyeY = this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1];
+		final float eyeZ = this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2];
 		
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0] += x;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1] += y;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2] += z;
+		final float lookAtX = this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0];
+		final float lookAtY = this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1];
+		final float lookAtZ = this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2];
+		
+		final float x0 = lookAtX - eyeX;
+		final float y0 = lookAtY - eyeY;
+		final float z0 = lookAtZ - eyeZ;
+		
+		final float lengthReciprocal = 1.0F / sqrt(x0 * x0 + y0 * y0 + z0 * z0);
+		
+		final float x1 = x0 * lengthReciprocal;
+		final float y1 = y0 * lengthReciprocal;
+		final float z1 = z0 * lengthReciprocal;
+		
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0] += distance * x1;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1] += distance * y1;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2] += distance * z1;
+		
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0] += distance * x1;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1] += distance * y1;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2] += distance * z1;
+		
+		calculateOrthonormalBasis();
+	}
+	
+	public void moveLeft(final float distance) {
+		final float eyeX = this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0];
+		final float eyeY = this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1];
+		final float eyeZ = this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2];
+		
+		final float lookAtX = this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0];
+		final float lookAtY = this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1];
+		final float lookAtZ = this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2];
+		
+		final float upX = this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP + 0];
+		final float upY = this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP + 1];
+		final float upZ = this.array[ABSOLUTE_OFFSET_OF_CAMERA_UP + 2];
+		
+		final float x0 = lookAtX - eyeX;
+		final float y0 = lookAtY - eyeY;
+		final float z0 = lookAtZ - eyeZ;
+		
+		final float lengthReciprocal = 1.0F / sqrt(x0 * x0 + y0 * y0 + z0 * z0);
+		
+		final float x1 = x0 * lengthReciprocal;
+		final float y1 = y0 * lengthReciprocal;
+		final float z1 = z0 * lengthReciprocal;
+		
+		final float x2 = upY * z1 - upZ * y1;
+		final float y2 = upZ * x1 - upX * z1;
+		final float z2 = upX * y1 - upY * x1;
+		
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0] += distance * x2;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1] += distance * y2;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2] += distance * z2;
+		
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0] += distance * x2;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1] += distance * y2;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2] += distance * z2;
+		
+		calculateOrthonormalBasis();
+	}
+	
+	public void rotateX(final float angleX) {
+		final float cosAngleX = cos(angleX);
+		final float sinAngleX = sin(angleX);
+		
+		final float eyeY = this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1];
+		final float eyeZ = this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2];
+		
+		final float lookAtY = this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1];
+		final float lookAtZ = this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2];
+		
+		final float y0 = lookAtY - eyeY;
+		final float z0 = lookAtZ - eyeZ;
+		final float y1 = y0 * cosAngleX - z0 * sinAngleX;
+		final float z1 = y0 * sinAngleX + z0 * cosAngleX;
+		
+		final float lengthReciprocal = 1.0F / sqrt(y1 * y1 + z1 * z1);
+		
+		final float y2 = y1 * lengthReciprocal + eyeY;
+		final float z2 = z1 * lengthReciprocal + eyeZ;
+		
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1] = y2;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2] = z2;
+		
+		calculateOrthonormalBasis();
+	}
+	
+	public void rotateY(final float angleY) {
+		final float cosAngleY = cos(angleY);
+		final float sinAngleY = sin(angleY);
+		
+		final float eyeX = this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0];
+		final float eyeZ = this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2];
+		
+		final float lookAtX = this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0];
+		final float lookAtZ = this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2];
+		
+		final float x0 = lookAtX - eyeX;
+		final float z0 = lookAtZ - eyeZ;
+		final float x1 = x0 * cosAngleY - z0 * sinAngleY;
+		final float z1 = x0 * sinAngleY + z0 * cosAngleY;
+		
+		final float lengthReciprocal = 1.0F / sqrt(x1 * x1 + z1 * z1);
+		
+		final float x2 = x1 * lengthReciprocal + eyeX;
+		final float z2 = z1 * lengthReciprocal + eyeZ;
+		
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0] = x2;
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2] = z2;
 		
 		calculateOrthonormalBasis();
 	}
@@ -222,6 +338,10 @@ final class Camera {
 		this.array[ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE] = distance;
 	}
 	
+	public void setZoom(final float zoom) {
+		this.array[ABSOLUTE_OFFSET_OF_CAMERA_ZOOM] = zoom;
+	}
+	
 	public void write(final DataOutput dataOutput) {
 		try {
 			dataOutput.writeFloat(getEyeX());
@@ -234,6 +354,7 @@ final class Camera {
 			dataOutput.writeFloat(getLookAtY());
 			dataOutput.writeFloat(getLookAtZ());
 			dataOutput.writeFloat(getViewPlaneDistance());
+			dataOutput.writeFloat(getZoom());
 		} catch(final IOException e) {
 			throw new UncheckedIOException(e);
 		}
@@ -257,6 +378,7 @@ final class Camera {
 			camera.setUp(dataInput.readFloat(), dataInput.readFloat(), dataInput.readFloat());
 			camera.setLookAt(dataInput.readFloat(), dataInput.readFloat(), dataInput.readFloat());
 			camera.setViewPlaneDistance(dataInput.readFloat());
+			camera.setZoom(dataInput.readFloat());
 			camera.calculateOrthonormalBasis();
 			
 			return camera;

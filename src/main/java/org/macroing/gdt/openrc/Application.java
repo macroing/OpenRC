@@ -18,27 +18,39 @@
  */
 package org.macroing.gdt.openrc;
 
+import java.awt.AWTException;
 import java.awt.Dimension;
 import java.awt.Graphics2D;
+import java.awt.HeadlessException;
+import java.awt.Point;
+import java.awt.Robot;
+import java.awt.Toolkit;
 import java.awt.event.KeyEvent;
 import java.awt.event.KeyListener;
+import java.awt.event.MouseEvent;
+import java.awt.event.MouseMotionListener;
 import java.awt.image.BufferedImage;
 import java.awt.image.DataBuffer;
 import java.awt.image.DataBufferInt;
 import java.awt.image.WritableRaster;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 
 import javax.swing.JFrame;
 import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
 
 import com.amd.aparapi.Kernel;
 import com.amd.aparapi.Range;
 
-abstract class Application implements KeyListener {
+abstract class Application implements KeyListener, MouseMotionListener {
+	private final AtomicBoolean isRecenteringMouse = new AtomicBoolean(true);
 	private final AtomicBoolean isRunning = new AtomicBoolean();
 	private final AtomicBoolean isTextureUpdateRequired = new AtomicBoolean();
+	private final AtomicInteger mouseLeft = new AtomicInteger();
+	private final AtomicInteger mouseUp = new AtomicInteger();
 	private final boolean[] isKeyPressed = new boolean[1024];
 	private final BufferedImage bufferedImage = new BufferedImage(Constants.WIDTH, Constants.HEIGHT, BufferedImage.TYPE_INT_RGB);
 	private final float[] pick = new float[Constants.SIZE_OF_PICK];
@@ -46,7 +58,9 @@ abstract class Application implements KeyListener {
 	private final int[] rGB;
 	private final JFrame jFrame;
 	private final Kernel kernel;
+	private final Point centerPoint = new Point();
 	private final Range range = Range.create(Constants.WIDTH * Constants.HEIGHT);
+	private final Robot robot = doCreateRobot();
 	private final Scene scene;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -70,6 +84,14 @@ abstract class Application implements KeyListener {
 	
 	public final FPSCounter getFPSCounter() {
 		return this.fPSCounter;
+	}
+	
+	public final int getMouseLeftAndReset() {
+		return this.mouseLeft.getAndSet(0);
+	}
+	
+	public final int getMouseUpAndReset() {
+		return this.mouseUp.getAndSet(0);
 	}
 	
 	public final Kernel getKernel() {
@@ -110,6 +132,26 @@ abstract class Application implements KeyListener {
 		this.isKeyPressed[e.getKeyCode()] = false;
 	}
 	
+	/**
+	 * Overridden to handle mouse dragging.
+	 * 
+	 * @param e a {@code MouseEvent}
+	 */
+	@Override
+	public void mouseDragged(final MouseEvent e) {
+		doMoveMouse(e);
+	}
+	
+	/**
+	 * Overridden to handle mouse movement.
+	 * 
+	 * @param e a {@code MouseEvent}
+	 */
+	@Override
+	public void mouseMoved(final MouseEvent e) {
+		doMoveMouse(e);
+	}
+	
 	public final void setTextureUpdateRequired(final boolean isTextureUpdateRequired) {
 		this.isTextureUpdateRequired.set(isTextureUpdateRequired);
 	}
@@ -126,8 +168,11 @@ abstract class Application implements KeyListener {
 //		Initialize the field isRunning to true:
 		this.isRunning.set(true);
 		
-//		Add a KeyListener to the JFrame:
-		SwingUtilities2.invokeAndWait(() -> this.jFrame.addKeyListener(this));
+//		Add a KeyListener and a MouseMotionListener to the JFrame:
+		SwingUtilities2.invokeAndWait(() -> {
+			this.jFrame.addKeyListener(this);
+			this.jFrame.addMouseMotionListener(this);
+		});
 		
 		while(this.isRunning.get()) {
 //			Update the current frame:
@@ -173,6 +218,35 @@ abstract class Application implements KeyListener {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+	private void doMoveMouse(final MouseEvent e) {
+		if(this.jFrame.isActive()) {
+			if(this.isRecenteringMouse.get() && this.centerPoint.x == e.getXOnScreen() && this.centerPoint.y == e.getYOnScreen()) {
+				this.isRecenteringMouse.set(false);
+			} else {
+				final int x = e.getXOnScreen();
+				final int y = e.getYOnScreen();
+				final int deltaX = x - this.centerPoint.x;
+				final int deltaY = y - this.centerPoint.y;
+				final int amountX = Math.abs(deltaX);
+				final int amountY = Math.abs(deltaY);
+				
+				doRecenterMouse();
+				
+				if(deltaX < 0) {
+					this.mouseLeft.addAndGet(amountX);
+				} else if(deltaX > 0) {
+					this.mouseLeft.addAndGet(-amountX);
+				}
+				
+				if(deltaY < 0) {
+					this.mouseUp.addAndGet(amountY);
+				} else if(deltaY > 0) {
+					this.mouseUp.addAndGet(-amountY);
+				}
+			}
+		}
+	}
+	
 	private void doPerformFrustumCulling() {
 //		TODO: Implement View Frustum Culling here.
 		
@@ -182,6 +256,21 @@ abstract class Application implements KeyListener {
 		
 		for(int i = 0; i < shapeIndices.length; i++) {
 			shapeIndices[i] = shapes.get(i).getIndex();
+		}
+	}
+	
+	private void doRecenterMouse() {
+		this.centerPoint.x = this.jFrame.getWidth() / 2;
+		this.centerPoint.y = this.jFrame.getHeight() / 2;
+		
+		SwingUtilities.convertPointToScreen(this.centerPoint, this.jFrame);
+		
+		this.isRecenteringMouse.set(true);
+		
+		try {
+			this.robot.mouseMove(this.centerPoint.x, this.centerPoint.y);
+		} catch(final HeadlessException | NullPointerException | SecurityException e) {
+			throw new UnsupportedOperationException("This method is not supported by the current configuration.");
 		}
 	}
 	
@@ -203,6 +292,7 @@ abstract class Application implements KeyListener {
 		final
 		JFrame jFrame = new JFrame();
 		jFrame.setContentPane(doCreateJPanel(bufferedImage, camera, consumer, fPSCounter));
+		jFrame.setCursor(Toolkit.getDefaultToolkit().createCustomCursor(Toolkit.getDefaultToolkit().getImage(""), new Point(0, 0), "invisible"));
 		jFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		jFrame.setFocusTraversalKeysEnabled(false);
 		jFrame.setIgnoreRepaint(true);
@@ -223,5 +313,13 @@ abstract class Application implements KeyListener {
 		jPanel.setPreferredSize(new Dimension(bufferedImage.getWidth(), bufferedImage.getHeight()));
 		
 		return jPanel;
+	}
+	
+	private static Robot doCreateRobot() {
+		try {
+			return new Robot();
+		} catch(AWTException e) {
+			return null;
+		}
 	}
 }
