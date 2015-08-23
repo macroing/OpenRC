@@ -100,17 +100,28 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		final float zoom = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ZOOM];
 		final float zoomReciprocal = 1.0F / zoom;
 		
-//		Initialize the U- and V-coordinates:
-		final float u = (index % this.width - this.width / 2.0F + 0.5F) * zoomReciprocal;
-		final float v = (index / this.width - this.height / 2.0F + 0.5F) * zoomReciprocal;
-		
 //		Initialize the pick update state:
 		final boolean isUpdatingPick = index == pickIndex;
+		
+//		Update the pixels with the RGB-values reset to black:
+		clearPixel(this.pixels, pixelOffset);
 		
 //		Update the origin point and direction vector of the ray to fire:
 		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 0] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0];
 		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 1] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1];
 		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 2] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2];
+		
+//		Initialize default pixel sample count:
+		final float samples = 1.0F;
+		
+//		Initialize default pixel sample point:
+		final float sampleX = 0.5F;
+		final float sampleY = 0.5F;
+		
+//		Initialize the U- and V-coordinates:
+		final float u = (index % this.width - this.width * 0.5F + sampleX) * zoomReciprocal;
+		final float v = (index / this.width - this.height * 0.5F + sampleY) * zoomReciprocal;
+		
 		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 0] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U + 0] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V + 0] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W + 0] * this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE];
 		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 1] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U + 1] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V + 1] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W + 1] * this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE];
 		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 2] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U + 2] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V + 2] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W + 2] * this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE];
@@ -120,9 +131,6 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		
 //		Calculate the distance to the closest shape, if any:
 		final float distance = findIntersection(true, true, isUpdatingPick, this.intersections, this.pick, this.rays, this.shapes, this.shapeIndicesLength, this.shapeIndices);
-		
-//		Update the pixels with the RGB-values reset to black:
-		clearPixel(this.pixels, pixelOffset);
 		
 		if(distance > 0.0F && distance < Constants.MAXIMUM_DISTANCE) {
 //			Initialize needed offset values:
@@ -146,6 +154,6 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		}
 		
 //		Update the pixel by performing gamma correction, tone mapping and scaling:
-		updatePixel(this.pixels, pixelOffset, index, this.rGB);
+		updatePixel(samples, this.pixels, pixelOffset, index, this.rGB);
 	}
 }

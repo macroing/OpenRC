@@ -298,23 +298,25 @@ abstract class AbstractRayCasterKernel extends Kernel {
 			directionZ *= lengthReciprocal;
 			
 //			Calculate the dot product as the dot product of the direction and the surface normal, or 0.0 if less than that:
-			final float dotProduct = max(directionX * surfaceNormalX + directionY * surfaceNormalY + directionZ * surfaceNormalZ, 0.0F);
+			final float dotProduct = directionX * surfaceNormalX + directionY * surfaceNormalY + directionZ * surfaceNormalZ;
 			
-//			Calculate the diffuse component as the dot product multiplied with the diffuse intensity multiplied by the shade:
-			final float diffuseComponent = dotProduct * diffuseIntensity * shade;
-			
-//			Reset the temporary pixel buffer:
-			pixels[pixelOffset + 3] = 0.0F;
-			pixels[pixelOffset + 4] = 0.0F;
-			pixels[pixelOffset + 5] = 0.0F;
-			
-//			Perform texture mapping on the shape:
-			performTextureMapping(isUpdatingPick, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textures);
-			
-//			Add the RGB-components of the diffuse color multiplied by the diffuse component, to the pixel:
-			pixels[pixelOffset + 0] += (diffuseColorR + pixels[pixelOffset + 3]) * diffuseComponent;
-			pixels[pixelOffset + 1] += (diffuseColorG + pixels[pixelOffset + 4]) * diffuseComponent;
-			pixels[pixelOffset + 2] += (diffuseColorB + pixels[pixelOffset + 5]) * diffuseComponent;
+			if(dotProduct > 0.0F) {
+//				Calculate the diffuse component as the dot product multiplied with the diffuse intensity multiplied by the shade:
+				final float diffuseComponent = dotProduct * diffuseIntensity * shade;
+				
+//				Reset the temporary pixel buffer:
+				pixels[pixelOffset + 3] = 0.0F;
+				pixels[pixelOffset + 4] = 0.0F;
+				pixels[pixelOffset + 5] = 0.0F;
+				
+//				Perform texture mapping on the shape:
+				performTextureMapping(isUpdatingPick, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textures);
+				
+//				Add the RGB-components of the diffuse color multiplied by the diffuse component, to the pixel:
+				pixels[pixelOffset + 0] += (diffuseColorR + pixels[pixelOffset + 3]) * diffuseComponent;
+				pixels[pixelOffset + 1] += (diffuseColorG + pixels[pixelOffset + 4]) * diffuseComponent;
+				pixels[pixelOffset + 2] += (diffuseColorB + pixels[pixelOffset + 5]) * diffuseComponent;
+			}
 		}
 	}
 	
@@ -666,11 +668,14 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SURFACE_NORMAL + 2] = surfaceNormalZ;
 	}
 	
-	public void updatePixel(final float[] pixels, final int pixelOffset, final int rGBOffset, final int[] rGB) {
-//		Get the RGB-values from the current pixel:
-		float r = pixels[pixelOffset + 0];
-		float g = pixels[pixelOffset + 1];
-		float b = pixels[pixelOffset + 2];
+	public void updatePixel(final float samples, final float[] pixels, final int pixelOffset, final int rGBOffset, final int[] rGB) {
+//		Calculate the reciprocal of samples:
+		final float samplesReciprocal = 1.0F / samples;
+		
+//		Get the RGB-components from the current pixel and multiply them with the reciprocal of samples:
+		float r = pixels[pixelOffset + 0] * samplesReciprocal;
+		float g = pixels[pixelOffset + 1] * samplesReciprocal;
+		float b = pixels[pixelOffset + 2] * samplesReciprocal;
 		
 //		Calculate the maximum component value (used in Tone Mapping):
 		final float maximumComponentValue = max(r, max(g, b));
@@ -679,7 +684,7 @@ abstract class AbstractRayCasterKernel extends Kernel {
 //			Calculate the reciprocal of the maximum component value:
 			final float maximumComponentValueReciprocal = 1.0F / maximumComponentValue;
 			
-//			Perform the Tone Mapping:
+//			Perform the Tone Mapping, by multiplying the RGB-components with the reciprocal of the maximum component value:
 			r *= maximumComponentValueReciprocal;
 			g *= maximumComponentValueReciprocal;
 			b *= maximumComponentValueReciprocal;
@@ -690,7 +695,7 @@ abstract class AbstractRayCasterKernel extends Kernel {
 		final int scaledG = (int)(g * 255.0F);
 		final int scaledB = (int)(b * 255.0F);
 		
-//		Set the RGB-value of the current pixel:
+//		Set the RGB-components of the current pixel as an int in the rGB-array:
 		rGB[rGBOffset] = toRGB(scaledR, scaledG, scaledB);
 	}
 	

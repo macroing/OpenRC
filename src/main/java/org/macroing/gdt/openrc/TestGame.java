@@ -41,10 +41,11 @@ import com.amd.aparapi.Kernel.EXECUTION_MODE;
  * <li>Shapes such as planes, spheres and triangles.</li>
  * <li>Lights such as point lights.</li>
  * <li>Textures such as solid- and decal textures.</li>
- * <li>Texture mapping such as spherical- and triangle texture mapping.</li>
+ * <li>Texture mapping such as spherical- and planar triangle texture mapping.</li>
  * <li>A simple camera for walking around in the scene.</li>
  * <li>Simple materials.</li>
  * <li>Occluding shapes create shadows.</li>
+ * <li>Simple collision detection.</li>
  * </ul>
  * <p>
  * Supported Controls:
@@ -181,6 +182,38 @@ public final class TestGame extends Application {
 	private static Scene createScene(final String[] args) {
 		final File file = args.length > 0 ? new File(args[0]) : null;
 		
-		return file != null && file.exists() ? Scene.read(file) : Scene.create();
+		return file != null && file.exists() ? Scene.read(file) : Scene.create(new Camera((x, y, z, scene) -> {
+			final boolean[] test = new boolean[] {true, true, true};
+			
+			if(scene != null) {
+				for(final Shape shape : scene.getShapesAsList()) {
+					if(shape instanceof Sphere) {
+						final Sphere sphere = Sphere.class.cast(shape);
+						
+						final float radius = sphere.getRadius();
+						
+						final float x0 = sphere.getX();
+						final float y0 = sphere.getY();
+						final float z0 = sphere.getZ();
+						
+						final float dX = x - x0;
+						final float dY = y - y0;
+						final float dZ = z - z0;
+						
+						final float distance = Mathematics.sqrt(dX * dX + dY * dY + dZ * dZ);
+						
+						if(distance <= radius) {
+							test[0] = false;
+							test[1] = false;
+							test[2] = false;
+							
+							break;
+						}
+					}
+				}
+			}
+			
+			return test;
+		}));//TODO: Add collision detection using the CameraPredicate in the future!
 	}
 }

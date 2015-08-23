@@ -33,6 +33,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.util.Objects;
 
 /**
  * The values in the {@code float} array {@code array} consists of the following:
@@ -78,11 +79,19 @@ final class Camera {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+	private final CameraPredicate cameraPredicate;
 	private final float[] array = new float[SIZE_OF_CAMERA];
+	private Scene scene;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	public Camera() {
+		this((x, y, z, scene) -> new boolean[] {true, true, true});
+	}
+	
+	public Camera(final CameraPredicate cameraPredicate) {
+		this.cameraPredicate = Objects.requireNonNull(cameraPredicate, "cameraPredicate == null");
+		
 		setEye(500.0F, 0.0F, 500.0F);
 		setUp(0.0F, 1.0F, 0.0F);
 		setLookAt(0.0F, 0.0F, 0.0F);
@@ -177,6 +186,10 @@ final class Camera {
 		return this.array;
 	}
 	
+	public Scene getScene() {
+		return this.scene;
+	}
+	
 	@Override
 	public String toString() {
 		return String.format("Camera: [Eye=%s,%s,%s], [Up=%s,%s,%s], [LookAt=%s,%s,%s], [OrthoNormalBasisU=%s,%s,%s], [OrthoNormalBasisV=%s,%s,%s], [OrthoNormalBasisW=%s,%s,%s], [ViewPlaneDistance=%s]", Float.toString(getEyeX()), Float.toString(getEyeY()), Float.toString(getEyeZ()), Float.toString(getUpX()), Float.toString(getUpY()), Float.toString(getUpZ()), Float.toString(getLookAtX()), Float.toString(getLookAtY()), Float.toString(getLookAtZ()), Float.toString(getOrthoNormalBasisUX()), Float.toString(getOrthoNormalBasisUY()), Float.toString(getOrthoNormalBasisUZ()), Float.toString(getOrthoNormalBasisVX()), Float.toString(getOrthoNormalBasisVY()), Float.toString(getOrthoNormalBasisVZ()), Float.toString(getOrthoNormalBasisWX()), Float.toString(getOrthoNormalBasisWY()), Float.toString(getOrthoNormalBasisWZ()), Float.toString(getViewPlaneDistance()));
@@ -215,15 +228,34 @@ final class Camera {
 		final float y1 = y0 * lengthReciprocal;
 		final float z1 = z0 * lengthReciprocal;
 		
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0] += distance * x1;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1] += distance * y1;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2] += distance * z1;
+		final float x2 = eyeX + distance * x1;
+		final float y2 = eyeY + distance * y1;
+		final float z2 = eyeZ + distance * z1;
 		
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0] += distance * x1;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1] += distance * y1;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2] += distance * z1;
+		final boolean[] test = this.cameraPredicate.test(x2, y2, z2, this.scene);
 		
-		calculateOrthonormalBasis();
+		final boolean testX = test[0];
+		final boolean testY = test[1];
+		final boolean testZ = test[2];
+		
+		if(testX || testY || testZ) {
+			if(testX) {
+				this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0] = x2;
+				this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0] += distance * x1;
+			}
+			
+			if(testY) {
+				this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1] = y2;
+				this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1] += distance * y1;
+			}
+			
+			if(testZ) {
+				this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2] = z2;
+				this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2] += distance * z1;
+			}
+			
+			calculateOrthonormalBasis();
+		}
 	}
 	
 	public void moveLeft(final float distance) {
@@ -253,15 +285,34 @@ final class Camera {
 		final float y2 = upZ * x1 - upX * z1;
 		final float z2 = upX * y1 - upY * x1;
 		
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0] += distance * x2;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1] += distance * y2;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2] += distance * z2;
+		final float x3 = eyeX + distance * x2;
+		final float y3 = eyeY + distance * y2;
+		final float z3 = eyeZ + distance * z2;
 		
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0] += distance * x2;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1] += distance * y2;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2] += distance * z2;
+		final boolean[] test = this.cameraPredicate.test(x3, y3, z3, this.scene);
 		
-		calculateOrthonormalBasis();
+		final boolean testX = test[0];
+		final boolean testY = test[1];
+		final boolean testZ = test[2];
+		
+		if(testX || testY || testZ) {
+			if(testX) {
+				this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0] = x3;
+				this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0] += distance * x2;
+			}
+			
+			if(testY) {
+				this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1] = y3;
+				this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1] += distance * y2;
+			}
+			
+			if(testZ) {
+				this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2] = z3;
+				this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2] += distance * z2;
+			}
+			
+			calculateOrthonormalBasis();
+		}
 	}
 	
 	public void rotateX(final float angleX) {
@@ -317,15 +368,33 @@ final class Camera {
 	}
 	
 	public void setEye(final float x, final float y, final float z) {
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0] = x;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1] = y;
-		this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2] = z;
+		final boolean[] test = this.cameraPredicate.test(x, y, z, this.scene);
+		
+		final boolean testX = test[0];
+		final boolean testY = test[1];
+		final boolean testZ = test[2];
+		
+		if(testX) {
+			this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0] = x;
+		}
+		
+		if(testY) {
+			this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1] = y;
+		}
+		
+		if(testZ) {
+			this.array[ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2] = z;
+		}
 	}
 	
 	public void setLookAt(final float x, final float y, final float z) {
 		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 0] = x;
 		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 1] = y;
 		this.array[ABSOLUTE_OFFSET_OF_CAMERA_LOOK_AT + 2] = z;
+	}
+	
+	public void setScene(final Scene scene) {
+		this.scene = Objects.requireNonNull(scene, "scene == null");
 	}
 	
 	public void setUp(final float x, final float y, final float z) {

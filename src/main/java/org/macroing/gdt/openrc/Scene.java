@@ -155,8 +155,12 @@ final class Scene {
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 	public static Scene create() {
+		return create(new Camera());
+	}
+	
+	public static Scene create(final Camera camera) {
 		final
-		Builder builder = new Builder();
+		Builder builder = new Builder(Objects.requireNonNull(camera, "camera == null"));
 		builder.addTexture(Texture.createSolidTexture("Texture_0.jpg"));
 //		builder.addTexture(Texture.createSolidTexture("Texture_1.png"));
 		builder.addTexture(Texture.createSolidTexture("Texture_2.png"));
@@ -175,7 +179,7 @@ final class Scene {
 //		builder.addMaterial(new Material().setAmbientColor(0.0F, 0.0F, 0.0F).setDiffuseColor(0.0F, 0.0F, 0.0F).setSpecularColor(1.0F, 1.0F, 1.0F).setSpecularPower(32.0F).setTextureOffsets(0));
 		
 		builder.addLight(new PointLight(400.0F, -20.0F, 400.0F, 100.0F));
-//		builder.addLight(new PointLight(600.0F, 20.0F, 600.0F, 100.0F));
+		builder.addLight(new PointLight(600.0F, 20.0F, 600.0F, 100.0F));
 //		builder.addLight(new PointLight(600.0F, 20.0F, 400.0F, 100.0F));
 //		builder.addLight(new PointLight(400.0F, 20.0F, 600.0F, 100.0F));
 		
@@ -188,7 +192,11 @@ final class Scene {
 		builder.addShape(new Plane(materialOffsets[2], 0.5F, 0.0F, 0.5F));
 		builder.addShape(new Triangle(materialOffsets[0], 2500.0F, 40.0F, 2500.0F, 1000.0F, 40.0F, 1500.0F, -1000.0F, 40.0F, -1000.0F));
 		
-		return builder.build();
+		final Scene scene = builder.build();
+		
+		camera.setScene(scene);
+		
+		return scene;
 	}
 	
 	public static Scene read(final DataInput dataInput) {

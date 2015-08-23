@@ -6,7 +6,7 @@ Because of the name, Open Ray Caster, some of you might believe Ray Casting is t
 
 The program runs a portion of its code on the GPU to speed things up, as previously mentioned. It does this using OpenCL, via a Java library called Aparapi. So OpenRC is written exclusively in Java. At least for now.
 
-![alt text](https://github.com/macroing/OpenRC/blob/master/images/OpenRC_5.png "OpenRC")
+![alt text](https://github.com/macroing/OpenRC/blob/master/images/OpenRC_7.png "OpenRC")
 
 This program is provided by Macroing.org.
 
@@ -16,10 +16,11 @@ Supported Features
 * Shapes such as planes, spheres and triangles.
 * Lights such as point lights.
 * Textures such as solid- and decal textures.
-* Texture mapping such as spherical- and triangle texture mapping.
+* Texture mapping such as spherical- and planar triangle texture mapping.
 * A simple camera for walking around in the scene.
 * Simple materials.
 * Occluding shapes create shadows.
+* Simple collision detection.
 
 **Note** More supported shapes, lights, materials, textures and texture mapping algorithms may very well be added in the future. The simple camera may be updated to support walking- and looking around like in an FPS-game.
 

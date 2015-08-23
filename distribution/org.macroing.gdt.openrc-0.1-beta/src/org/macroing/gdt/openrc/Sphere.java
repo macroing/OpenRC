@@ -49,9 +49,25 @@ final class Sphere extends Shape {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+	public float getRadius() {
+		return this.radius;
+	}
+	
 	@Override
 	public float getType() {
 		return TYPE;
+	}
+	
+	public float getX() {
+		return this.x;
+	}
+	
+	public float getY() {
+		return this.y;
+	}
+	
+	public float getZ() {
+		return this.z;
 	}
 	
 	@Override
