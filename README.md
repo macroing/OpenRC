@@ -22,7 +22,7 @@ Supported Features
 * Occluding shapes create shadows.
 * Simple collision detection.
 
-**Note** More supported shapes, lights, materials, textures and texture mapping algorithms may very well be added in the future. The simple camera may be updated to support walking- and looking around like in an FPS-game.
+**Note** More supported shapes, lights, materials, textures and texture mapping algorithms may very well be added in the future.
 
 Supported Controls
 ------------------
