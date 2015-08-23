@@ -31,8 +31,6 @@ Supported Controls
 * Press 'E' to display the current execution mode (GPU or JTP*).
 * Press 'ESC' to exit.
 * Press 'F' to fire invisible bullets to make the shapes bleed.
-* Press 'LEFT ARROW' to look left.
-* Press 'RIGHT ARROW' to look right.
 * Press 'S' to move backward.
 * Press 'T' to toggle between the GPU- and JTP* execution modes.
 * Press 'W' to move forward.
