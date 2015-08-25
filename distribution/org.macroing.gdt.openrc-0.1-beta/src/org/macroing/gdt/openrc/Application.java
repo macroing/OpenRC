@@ -52,14 +52,14 @@ abstract class Application implements KeyListener, MouseMotionListener {
 	private final AtomicInteger mouseLeft = new AtomicInteger();
 	private final AtomicInteger mouseUp = new AtomicInteger();
 	private final boolean[] isKeyPressed = new boolean[1024];
-	private final BufferedImage bufferedImage = new BufferedImage(Constants.WIDTH, Constants.HEIGHT, BufferedImage.TYPE_INT_RGB);
+	private final BufferedImage bufferedImage = new BufferedImage(Constants.WIDTH / Constants.WIDTH_SCALE, Constants.HEIGHT / Constants.HEIGHT_SCALE, BufferedImage.TYPE_INT_RGB);
 	private final float[] pick = new float[Constants.SIZE_OF_PICK];
 	private final FPSCounter fPSCounter = new FPSCounter();
 	private final int[] rGB;
 	private final JFrame jFrame;
 	private final Kernel kernel;
 	private final Point centerPoint = new Point();
-	private final Range range = Range.create(Constants.WIDTH * Constants.HEIGHT);
+	private final Range range = Range.create((Constants.WIDTH / Constants.WIDTH_SCALE) * (Constants.HEIGHT / Constants.HEIGHT_SCALE));
 	private final Robot robot = doCreateRobot();
 	private final Scene scene;
 	
@@ -296,7 +296,7 @@ abstract class Application implements KeyListener, MouseMotionListener {
 		jFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		jFrame.setFocusTraversalKeysEnabled(false);
 		jFrame.setIgnoreRepaint(true);
-		jFrame.setSize(bufferedImage.getWidth(), bufferedImage.getHeight());
+		jFrame.setSize(bufferedImage.getWidth() * Constants.WIDTH_SCALE, bufferedImage.getHeight() * Constants.HEIGHT_SCALE);
 		jFrame.setLocationRelativeTo(null);
 		jFrame.setTitle(String.format("OpenRC v%s", Constants.getVersion()));
 		jFrame.setVisible(true);
@@ -310,7 +310,7 @@ abstract class Application implements KeyListener, MouseMotionListener {
 		final
 		JPanel jPanel = new JBufferedImagePanel(bufferedImage, camera, consumer, fPSCounter);
 		jPanel.setLayout(new AbsoluteLayoutManager());
-		jPanel.setPreferredSize(new Dimension(bufferedImage.getWidth(), bufferedImage.getHeight()));
+		jPanel.setPreferredSize(new Dimension(bufferedImage.getWidth() * Constants.WIDTH_SCALE, bufferedImage.getHeight() * Constants.HEIGHT_SCALE));
 		
 		return jPanel;
 	}

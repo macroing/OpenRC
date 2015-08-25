@@ -57,7 +57,7 @@ final class JBufferedImagePanel extends JPanel {
 		graphics2D.setRenderingHint(RenderingHints.KEY_COLOR_RENDERING, RenderingHints.VALUE_COLOR_RENDER_SPEED);
 		graphics2D.setRenderingHint(RenderingHints.KEY_INTERPOLATION, RenderingHints.VALUE_INTERPOLATION_BILINEAR);
 		graphics2D.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_SPEED);
-		graphics2D.drawImage(this.bufferedImage, 0, 0, this.bufferedImage.getWidth(), this.bufferedImage.getHeight(), this);
+		graphics2D.drawImage(this.bufferedImage, 0, 0, this.bufferedImage.getWidth() * Constants.WIDTH_SCALE, this.bufferedImage.getHeight() * Constants.HEIGHT_SCALE, this);
 		
 		this.consumer.accept(graphics2D);
 		

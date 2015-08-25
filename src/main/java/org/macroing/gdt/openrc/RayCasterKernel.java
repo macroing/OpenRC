@@ -53,17 +53,17 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 	
 	public RayCasterKernel(final float[] pick, final int[] rGB, final Scene scene) {
 		this.camera = scene.getCamera().getArray();
-		this.intersections = Intersection.create(Constants.WIDTH * Constants.HEIGHT);
+		this.intersections = Intersection.create((Constants.WIDTH / Constants.WIDTH_SCALE) * (Constants.HEIGHT / Constants.HEIGHT_SCALE));
 		this.lights = scene.getLightsAsArray();
 		this.materials = scene.getMaterialsAsArray();
 		this.pick = pick;
-		this.pixels = new float[Constants.WIDTH * Constants.HEIGHT * Constants.SIZE_OF_PIXEL];
-		this.rays = new float[Constants.WIDTH * Constants.HEIGHT * Constants.SIZE_OF_RAY];
+		this.pixels = new float[(Constants.WIDTH / Constants.WIDTH_SCALE) * (Constants.HEIGHT / Constants.HEIGHT_SCALE) * Constants.SIZE_OF_PIXEL];
+		this.rays = new float[(Constants.WIDTH / Constants.WIDTH_SCALE) * (Constants.HEIGHT / Constants.HEIGHT_SCALE) * Constants.SIZE_OF_RAY];
 		this.shapes = scene.getShapesAsArray();
-		this.height = Constants.HEIGHT;
+		this.height = Constants.HEIGHT / Constants.HEIGHT_SCALE;
 		this.lightsLength = this.lights.length;
 		this.shapeIndicesLength = scene.getShapeCount();
-		this.width = Constants.WIDTH;
+		this.width = Constants.WIDTH / Constants.WIDTH_SCALE;
 		this.rGB = rGB;
 		this.shapeIndices = scene.getShapeIndices();
 		this.textures = scene.getTexturesAsArray();

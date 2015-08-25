@@ -23,6 +23,7 @@ final class Constants {
 	public static final float MAXIMUM_DISTANCE = Float.MAX_VALUE;
 	public static final float PI = (float)(Math.PI);
 	public static final int HEIGHT = 768;
+	public static final int HEIGHT_SCALE = 1;
 	public static final int RELATIVE_OFFSET_OF_PICK_SHAPE_DISTANCE = 1;
 	public static final int RELATIVE_OFFSET_OF_PICK_SHAPE_OFFSET = 0;
 	public static final int RELATIVE_OFFSET_OF_PICK_TEXTURE_OFFSET = 2;
@@ -35,6 +36,7 @@ final class Constants {
 	public static final int SIZE_OF_PIXEL = 3 + 3;
 	public static final int SIZE_OF_RAY = 3 + 3 + 3 + 3;
 	public static final int WIDTH = 1024;
+	public static final int WIDTH_SCALE = 1;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	

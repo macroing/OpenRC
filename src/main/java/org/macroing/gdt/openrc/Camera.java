@@ -95,7 +95,7 @@ final class Camera {
 		setEye(500.0F, 0.0F, 500.0F);
 		setUp(0.0F, 1.0F, 0.0F);
 		setLookAt(0.0F, 0.0F, 0.0F);
-		setViewPlaneDistance(800.0F);
+		setViewPlaneDistance(800.0F / Constants.WIDTH_SCALE);
 		setZoom(1.0F);
 		calculateOrthonormalBasis();
 	}
