@@ -42,6 +42,10 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
+import org.macroing.gdt.openrc.swing.AbsoluteLayout;
+import org.macroing.gdt.openrc.swing.JBufferedImagePanel;
+import org.macroing.gdt.openrc.swing.SwingUtilities2;
+
 import com.amd.aparapi.Kernel;
 import com.amd.aparapi.Range;
 
@@ -68,7 +72,7 @@ abstract class Application implements KeyListener, MouseMotionListener {
 	protected Application(final Scene scene) {
 		this.rGB = doToRGB(this.bufferedImage);
 		this.scene = scene;
-		this.jFrame = doCreateJFrame(this.bufferedImage, this.scene.getCamera(), this::render, this.fPSCounter);
+		this.jFrame = doCreateJFrame(this.bufferedImage, this::render);
 		this.kernel = new RayCasterKernel(this.pick, this.rGB, this.scene);
 	}
 	
@@ -288,10 +292,10 @@ abstract class Application implements KeyListener, MouseMotionListener {
 		return rGB;
 	}
 	
-	private static JFrame doCreateJFrame(final BufferedImage bufferedImage, final Camera camera, final Consumer<Graphics2D> consumer, final FPSCounter fPSCounter) {
+	private static JFrame doCreateJFrame(final BufferedImage bufferedImage, final Consumer<Graphics2D> consumer) {
 		final
 		JFrame jFrame = new JFrame();
-		jFrame.setContentPane(doCreateJPanel(bufferedImage, camera, consumer, fPSCounter));
+		jFrame.setContentPane(doCreateJPanel(bufferedImage, consumer));
 		jFrame.setCursor(Toolkit.getDefaultToolkit().createCustomCursor(Toolkit.getDefaultToolkit().getImage(""), new Point(0, 0), "invisible"));
 		jFrame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		jFrame.setFocusTraversalKeysEnabled(false);
@@ -306,10 +310,10 @@ abstract class Application implements KeyListener, MouseMotionListener {
 		return jFrame;
 	}
 	
-	private static JPanel doCreateJPanel(final BufferedImage bufferedImage, final Camera camera, final Consumer<Graphics2D> consumer, final FPSCounter fPSCounter) {
+	private static JPanel doCreateJPanel(final BufferedImage bufferedImage, final Consumer<Graphics2D> consumer) {
 		final
-		JPanel jPanel = new JBufferedImagePanel(bufferedImage, camera, consumer, fPSCounter);
-		jPanel.setLayout(new AbsoluteLayoutManager());
+		JPanel jPanel = new JBufferedImagePanel(bufferedImage, consumer, Constants.WIDTH_SCALE, Constants.HEIGHT_SCALE);
+		jPanel.setLayout(new AbsoluteLayout());
 		jPanel.setPreferredSize(new Dimension(bufferedImage.getWidth() * Constants.WIDTH_SCALE, bufferedImage.getHeight() * Constants.HEIGHT_SCALE));
 		
 		return jPanel;

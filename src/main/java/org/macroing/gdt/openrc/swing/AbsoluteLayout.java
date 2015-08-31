@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU Lesser General Public License
  * along with org.macroing.gdt.openrc. If not, see <http://www.gnu.org/licenses/>.
  */
-package org.macroing.gdt.openrc;
+package org.macroing.gdt.openrc.swing;
 
 import java.awt.Component;
 import java.awt.Container;
@@ -26,7 +26,15 @@ import java.awt.LayoutManager;
 import java.awt.Point;
 import java.io.Serializable;
 
-final class AbsoluteLayoutManager implements LayoutManager, Serializable {
+/**
+ * An {@code AbsoluteLayout} lays out its {@code Component}s using their locations. But it can also take into account their preferred sizes. Only visible {@code Component}s will be taken into account.
+ * <p>
+ * Using this {@code LayoutManager}, you don't have to call {@code setLayout(null)} on a given {@code Container} instance. Not only is that discouraged, but it may also cause unintended side-effects.
+ * 
+ * @since 1.0.0
+ * @author J&#246;rgen Lundgren
+ */
+public final class AbsoluteLayout implements LayoutManager, Serializable {
 	private static final long serialVersionUID = 1L;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -35,20 +43,44 @@ final class AbsoluteLayoutManager implements LayoutManager, Serializable {
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
-	public AbsoluteLayoutManager() {
+	/**
+	 * Constructs a new {@code AbsoluteLayout}.
+	 * <p>
+	 * Calling this constructor is equivalent to calling {@code new AbsoluteLayout(true)}.
+	 */
+	public AbsoluteLayout() {
 		this(true);
 	}
 	
-	public AbsoluteLayoutManager(final boolean isUsingPreferredSize) {
+	/**
+	 * Constructs a new {@code AbsoluteLayout}.
+	 * <p>
+	 * If {@code isUsingPreferredSize} is {@code true}, this {@code AbsoluteLayout} instance will take the preferred size into account when laying out its {@code Component}s.
+	 * 
+	 * @param isUsingPreferredSize {@code true} if, and only if, this {@code AbsoluteLayout} instance should take the preferred size into account when laying out its {@code Component}s
+	 */
+	public AbsoluteLayout(final boolean isUsingPreferredSize) {
 		setUsingPreferredSize(isUsingPreferredSize);
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
+	/**
+	 * Returns {@code true} if, and only if, this {@code AbsoluteLayout} instance will take the preferred size into account when laying out its {@code Component}s, {@code false} otherwise.
+	 * 
+	 * @return {@code true} if, and only if, this {@code AbsoluteLayout} instance will take the preferred size into account when laying out its {@code Component}s, {@code false} otherwise
+	 */
 	public boolean isUsingPreferredSize() {
 		return this.isUsingPreferredSize;
 	}
 	
+	/**
+	 * Calculates the minimum size for the specified {@code Container}, given the {@code Component}s it contains.
+	 * <p>
+	 * At this time, the minimum size is the same as the preferred size. So this method simply delegates to {@code preferredLayoutSize(Container)}.
+	 * 
+	 * @param parent the {@code Container} to be laid out
+	 */
 	@Override
 	public Dimension minimumLayoutSize(final Container parent) {
 		synchronized(parent.getTreeLock()) {
@@ -56,6 +88,11 @@ final class AbsoluteLayoutManager implements LayoutManager, Serializable {
 		}
 	}
 	
+	/**
+	 * Calculates the preferred size for the specified {@code Container}, given the {@code Component}s it contains.
+	 * 
+	 * @param parent the {@code Container} to be laid out
+	 */
 	@Override
 	public Dimension preferredLayoutSize(final Container parent) {
 		final Insets parentInsets = parent.getInsets();
@@ -94,11 +131,22 @@ final class AbsoluteLayoutManager implements LayoutManager, Serializable {
 		return new Dimension(width, height);
 	}
 	
+	/**
+	 * Returns a {@code String} representation of this {@code AbsoluteLayout} instance.
+	 * 
+	 * @return a {@code String} representation of this {@code AbsoluteLayout} instance
+	 */
 	@Override
 	public String toString() {
 		return String.format("[%s]", getClass().getName());
 	}
 	
+	/**
+	 * This method is not supported by this class. So calling it will do nothing.
+	 * 
+	 * @param name the name to be associated with {@code component}
+	 * @param component the {@code Component} to be added
+	 */
 	@Override
 	public void addLayoutComponent(final String name, final Component component) {
 //		Do nothing.
@@ -136,11 +184,23 @@ final class AbsoluteLayoutManager implements LayoutManager, Serializable {
 		}
 	}
 	
+	/**
+	 * This method is not supported by this class. So calling it will do nothing.
+	 * 
+	 * @param component the {@code Component} to be removed
+	 */
 	@Override
 	public void removeLayoutComponent(final Component component) {
 //		Do nothing.
 	}
 	
+	/**
+	 * Sets the preferred size usage for this {@code AbsoluteLayout}.
+	 * <p>
+	 * If {@code true} is specified, this {@code AbsoluteLayout} instance will take the preferred size into account when laying out its {@code Component}s.
+	 * 
+	 * @param isUsingPreferredSize {@code true} if, and only if, this {@code AbsoluteLayout} instance should take the preferred size into account when laying out its {@code Component}s
+	 */
 	public void setUsingPreferredSize(final boolean isUsingPreferredSize) {
 		this.isUsingPreferredSize = isUsingPreferredSize;
 	}

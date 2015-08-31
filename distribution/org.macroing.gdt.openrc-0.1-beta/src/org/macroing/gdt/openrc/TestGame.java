@@ -18,11 +18,14 @@
  */
 package org.macroing.gdt.openrc;
 
+import java.awt.Color;
 import java.awt.Graphics2D;
 import java.awt.event.KeyEvent;
 import java.io.File;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
+
+import org.macroing.gdt.openrc.swing.SwingUtilities2;
 
 import com.amd.aparapi.Kernel.EXECUTION_MODE;
 
@@ -83,7 +86,21 @@ public final class TestGame extends Application {
 	
 	@Override
 	public void render(final Graphics2D graphics2D) {
-//		Do nothing.
+		final Camera camera = getScene().getCamera();
+		
+		final FPSCounter fPSCounter = getFPSCounter();
+		
+		final String fPS = Long.toString(fPSCounter.getFPS());
+		final String x = Float.toString(camera.getEyeX());
+		final String y = Float.toString(camera.getEyeY());
+		final String z = Float.toString(camera.getEyeZ());
+		final String string = String.format("FPS: %s    Location: %s, %s, %s", fPS, x, y, z);
+		
+		graphics2D.setColor(Color.BLACK);
+		graphics2D.fillRect(10, 10, graphics2D.getFontMetrics().stringWidth(string) + 20, graphics2D.getFontMetrics().getHeight() + 20);
+		graphics2D.setColor(Color.WHITE);
+		graphics2D.drawRect(10, 10, graphics2D.getFontMetrics().stringWidth(string) + 20, graphics2D.getFontMetrics().getHeight() + 20);
+		graphics2D.drawString(string, 20, 30);
 	}
 	
 	@Override
