@@ -18,6 +18,11 @@
  */
 package org.macroing.gdt.openrc;
 
+import org.macroing.gdt.openrc.geometry.Camera;
+import org.macroing.gdt.openrc.geometry.Intersection;
+import org.macroing.gdt.openrc.geometry.Scene;
+import org.macroing.gdt.openrc.geometry.Shape;
+
 /**
  * The values in the {@code float} array {@code rays} consists of the following:
  * <ol>
@@ -32,7 +37,7 @@ package org.macroing.gdt.openrc;
  * @since 1.0.0
  * @author J&#246;rgen Lundgren
  */
-final class RayCasterKernel extends AbstractRayCasterKernel {
+public final class RayCasterKernel extends AbstractRayCasterKernel {
 	private final float[] camera;
 	private final float[] intersections;
 	private final float[] lights;
@@ -97,7 +102,7 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		final int rayOffset = index * Constants.SIZE_OF_RAY;
 		
 //		Initialize zoom factor and zoom factor reciprocal:
-		final float zoom = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ZOOM];
+		final float zoom = this.camera[Camera.ABSOLUTE_OFFSET_OF_ZOOM];
 		final float zoomReciprocal = 1.0F / zoom;
 		
 //		Initialize the pick update state:
@@ -107,9 +112,9 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		clearPixel(this.pixels, pixelOffset);
 		
 //		Update the origin point and direction vector of the ray to fire:
-		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 0] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_EYE + 0];
-		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 1] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_EYE + 1];
-		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 2] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_EYE + 2];
+		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 0] = this.camera[Camera.ABSOLUTE_OFFSET_OF_EYE + 0];
+		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 1] = this.camera[Camera.ABSOLUTE_OFFSET_OF_EYE + 1];
+		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 2] = this.camera[Camera.ABSOLUTE_OFFSET_OF_EYE + 2];
 		
 //		Initialize default pixel sample count:
 		final float samples = 1.0F;
@@ -122,9 +127,9 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		final float u = (index % this.width - this.width * 0.5F + sampleX) * zoomReciprocal;
 		final float v = (index / this.width - this.height * 0.5F + sampleY) * zoomReciprocal;
 		
-		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 0] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U + 0] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V + 0] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W + 0] * this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE];
-		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 1] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U + 1] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V + 1] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W + 1] * this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE];
-		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 2] = this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_U + 2] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_V + 2] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_ORTHONORMAL_BASIS_W + 2] * this.camera[Camera.ABSOLUTE_OFFSET_OF_CAMERA_VIEW_PLANE_DISTANCE];
+		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 0] = this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_U + 0] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_V + 0] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_W + 0] * this.camera[Camera.ABSOLUTE_OFFSET_OF_VIEW_PLANE_DISTANCE];
+		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 1] = this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_U + 1] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_V + 1] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_W + 1] * this.camera[Camera.ABSOLUTE_OFFSET_OF_VIEW_PLANE_DISTANCE];
+		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 2] = this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_U + 2] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_V + 2] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_W + 2] * this.camera[Camera.ABSOLUTE_OFFSET_OF_VIEW_PLANE_DISTANCE];
 		
 //		Normalize the ray direction vector:
 		normalize(this.rays, rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0);
@@ -134,9 +139,9 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		
 		if(distance > 0.0F && distance < Constants.MAXIMUM_DISTANCE) {
 //			Initialize needed offset values:
-			final int intersectionOffset = index * Intersection.SIZE_OF_INTERSECTION;
-			final int shapeOffset = (int)(this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET]);
-			final int materialOffset = (int)(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SHAPE_MATERIAL_OFFSET]);
+			final int intersectionOffset = index * Intersection.SIZE;
+			final int shapeOffset = (int)(this.intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SHAPE_OFFSET]);
+			final int materialOffset = (int)(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_MATERIAL_OFFSET]);
 			
 //			Calculate the ambient and direct light:
 			attemptToAddAmbientLight(isUpdatingPick, this.intersections, this.materials, this.pick, this.pixels, this.shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, this.textures);
@@ -144,7 +149,7 @@ final class RayCasterKernel extends AbstractRayCasterKernel {
 		}
 		
 		if(isUpdatingPick) {
-			this.pick[0] = (this.intersections[index * Intersection.SIZE_OF_INTERSECTION + Intersection.RELATIVE_OFFSET_OF_INTERSECTION_SHAPE_OFFSET]);
+			this.pick[0] = (this.intersections[index * Intersection.SIZE + Intersection.RELATIVE_OFFSET_OF_SHAPE_OFFSET]);
 			this.pick[1] = distance;
 			
 //			Uncomment the following code to show a white pixel at the 'center' of the screen, where the pick is used:

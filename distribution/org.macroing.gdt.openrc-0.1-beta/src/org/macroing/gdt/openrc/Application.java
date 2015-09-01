@@ -42,6 +42,8 @@ import javax.swing.JFrame;
 import javax.swing.JPanel;
 import javax.swing.SwingUtilities;
 
+import org.macroing.gdt.openrc.geometry.Scene;
+import org.macroing.gdt.openrc.geometry.Shape;
 import org.macroing.gdt.openrc.swing.AbsoluteLayout;
 import org.macroing.gdt.openrc.swing.JBufferedImagePanel;
 import org.macroing.gdt.openrc.swing.SwingUtilities2;
@@ -49,7 +51,7 @@ import org.macroing.gdt.openrc.swing.SwingUtilities2;
 import com.amd.aparapi.Kernel;
 import com.amd.aparapi.Range;
 
-abstract class Application implements KeyListener, MouseMotionListener {
+public abstract class Application implements KeyListener, MouseMotionListener {
 	private final AtomicBoolean isRecenteringMouse = new AtomicBoolean(true);
 	private final AtomicBoolean isRunning = new AtomicBoolean();
 	private final AtomicBoolean isTextureUpdateRequired = new AtomicBoolean();

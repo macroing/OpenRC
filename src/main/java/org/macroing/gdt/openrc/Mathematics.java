@@ -18,7 +18,7 @@
  */
 package org.macroing.gdt.openrc;
 
-final class Mathematics {
+public final class Mathematics {
 	public static final float PI = (float)(Math.PI);
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////

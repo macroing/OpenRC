@@ -25,6 +25,11 @@ import java.io.File;
 import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import org.macroing.gdt.openrc.geometry.Camera;
+import org.macroing.gdt.openrc.geometry.Scene;
+import org.macroing.gdt.openrc.geometry.Shape;
+import org.macroing.gdt.openrc.geometry.Sphere;
+import org.macroing.gdt.openrc.geometry.Texture;
 import org.macroing.gdt.openrc.swing.SwingUtilities2;
 
 import com.amd.aparapi.Kernel.EXECUTION_MODE;
@@ -143,7 +148,7 @@ public final class TestGame extends Application {
 			
 			final int[] textures = getScene().getTexturesAsArray();
 			
-			final int width = textures[textureOffset + Texture.RELATIVE_OFFSET_OF_TEXTURE_WIDTH];
+			final int width = textures[textureOffset + Texture.RELATIVE_OFFSET_OF_WIDTH];
 			final int startX = textureU - 5;
 			final int startY = textureV - 5;
 			final int radius = 2;
@@ -156,7 +161,7 @@ public final class TestGame extends Application {
 							
 							final int offset = (startY + y) * width + (startX + x);
 							
-							textures[textureOffset + Texture.RELATIVE_OFFSET_OF_TEXTURE_DATA + offset] = rGB;
+							textures[textureOffset + Texture.RELATIVE_OFFSET_OF_DATA + offset] = rGB;
 						}
 					}
 				}

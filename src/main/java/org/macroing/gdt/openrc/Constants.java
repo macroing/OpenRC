@@ -18,7 +18,7 @@
  */
 package org.macroing.gdt.openrc;
 
-final class Constants {
+public final class Constants {
 	public static final float EPSILON = 1.e-4F;
 	public static final float MAXIMUM_DISTANCE = Float.MAX_VALUE;
 	public static final float PI = (float)(Math.PI);

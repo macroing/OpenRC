@@ -20,7 +20,7 @@ package org.macroing.gdt.openrc;
 
 import java.util.concurrent.atomic.AtomicLong;
 
-final class FPSCounter {
+public final class FPSCounter {
 	private final AtomicLong newFPS = new AtomicLong();
 	private final AtomicLong newFPSReferenceTimeMillis = new AtomicLong();
 	private final AtomicLong newFrameTimeMillis = new AtomicLong();
