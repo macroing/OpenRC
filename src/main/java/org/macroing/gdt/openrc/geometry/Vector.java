@@ -96,6 +96,22 @@ public final class Vector {
 		return dotProduct(vector, offset, vector, offset);
 	}
 	
+	/**
+	 * Returns a {@code float} array with the vector corresponding to the surface normal of the provided X-, Y- and Z-components.
+	 * <p>
+	 * The returned {@code float} array will have a length of {@code 3}, and the vectors X-, Y- and Z-components will be located at indices {@code 0}, {@code 1} and {@code 2}, respectively.
+	 * 
+	 * @param aX the X-component of the A vector
+	 * @param aY the Y-component of the A vector
+	 * @param aZ the Z-component of the A vector
+	 * @param bX the X-component of the B vector
+	 * @param bY the Y-component of the B vector
+	 * @param bZ the Z-component of the B vector
+	 * @param cX the X-component of the C vector
+	 * @param cY the Y-component of the C vector
+	 * @param cZ the Z-component of the C vector
+	 * @return a {@code float} array with the vector corresponding to the surface normal of the provided X-, Y- and Z-components
+	 */
 	public static float[] surfaceNormal(final float aX, final float aY, final float aZ, final float bX, final float bY, final float bZ, final float cX, final float cY, final float cZ) {
 //		Subtract vector a from vector b:
 		final float x0 = bX - aX;
