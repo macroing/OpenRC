@@ -344,13 +344,70 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 				
 				if(shade > 0.0F) {
 					attemptToAddDiffuseReflectionFromPointLight(isUpdatingPick, shade, intersections, lights, materials, pick, pixels, shapes, intersectionOffset, i, materialOffset, pixelOffset, shapeOffset, textures);
-					attemptToAddSpecularReflectionFromPointLight(shade, intersections, lights, materials, pixels, intersectionOffset, i, materialOffset, pixelOffset);
+					attemptToAddSpecularReflectionFromPointLight(shade, intersections, lights, materials, pixels, rays, intersectionOffset, i, materialOffset, pixelOffset, rayOffset);
 				}
 			}
 		}
 	}
 	
-	public void attemptToAddSpecularReflectionFromPointLight(final float shade, final float[] intersections, final float[] lights, final float[] materials, final float[] pixels, final int intersectionOffset, final int lightOffset, final int materialOffset, final int pixelOffset) {
+	public void attemptToAddSpecularReflectionFromPointLight(final float shade, final float[] intersections, final float[] lights, final float[] materials, final float[] pixels, final float[] rays, final int intersectionOffset, final int lightOffset, final int materialOffset, final int pixelOffset, final int rayOffset) {
+		final float specularIntensity = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_INTENSITY];
+		
+		if(specularIntensity > 0.0F) {
+			final float pointLightX = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POSITION + 0];
+			final float pointLightY = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POSITION + 1];
+			final float pointLightZ = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POSITION + 2];
+			
+			float surfaceIntersectionX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 0];
+			float surfaceIntersectionY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 1];
+			float surfaceIntersectionZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 2];
+			
+			float surfaceNormalX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 0];
+			float surfaceNormalY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 1];
+			float surfaceNormalZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 2];
+			
+			float woX = -rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 0];
+			float woY = -rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 1];
+			float woZ = -rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 2];
+			
+			float wiX = pointLightX - surfaceIntersectionX;
+			float wiY = pointLightY - surfaceIntersectionY;
+			float wiZ = pointLightZ - surfaceIntersectionZ;
+			
+			float lengthReciprocalWi = 1.0F / sqrt(wiX * wiX + wiY * wiY + wiZ * wiZ);
+			
+			wiX *= lengthReciprocalWi;
+			wiY *= lengthReciprocalWi;
+			wiZ *= lengthReciprocalWi;
+			
+			float surfaceNormalDotWi = surfaceNormalX * wiX + surfaceNormalY * wiY + surfaceNormalZ * wiZ;
+			
+			if(surfaceNormalDotWi > 0.0F) {
+				float rX = -wiX + (2.0F * surfaceNormalX * surfaceNormalDotWi);
+				float rY = -wiY + (2.0F * surfaceNormalY * surfaceNormalDotWi);
+				float rZ = -wiZ + (2.0F * surfaceNormalZ * surfaceNormalDotWi);
+				
+				float rDotWo = rX * woX + rY * woY + rZ * woZ;
+				
+				if(rDotWo > 0.0F) {
+//					Get the RGB-components for the specular color:
+					final float specularColorR = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_COLOR + 0];
+					final float specularColorG = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_COLOR + 1];
+					final float specularColorB = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_COLOR + 2];
+					
+//					Get the specular power and calculate the specular component:
+					final float specularPower = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_POWER];
+					final float specularComponent = pow(rDotWo, specularPower) * specularIntensity * shade;
+					
+//					Add the RGB-components of the specular color multiplied by the specular component, to the pixel:
+					pixels[pixelOffset + 0] += specularColorR * specularComponent;
+					pixels[pixelOffset + 1] += specularColorG * specularComponent;
+					pixels[pixelOffset + 2] += specularColorB * specularComponent;
+				}
+			}
+		}
+		
+		/*
 //		Get the specular intensity:
 		final float specularIntensity = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_INTENSITY];
 		
@@ -430,6 +487,7 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 				pixels[pixelOffset + 2] += specularColorB * specularComponent;
 			}
 		}
+		*/
 	}
 	
 	public void normalize(final float[] vector, final int offset) {
@@ -657,25 +715,20 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 //		Calculate the length of the delta vector:
 		final float length = sqrt(dx * dx + dy * dy + dz * dz);
 		
-//		Initialize variables with the surface normal vector:
-		float surfaceNormalX = 0.0F;
-		float surfaceNormalY = 0.0F;
-		float surfaceNormalZ = 0.0F;
-		
 		if(length > 0.0F) {
 //			//Calculate the length reciprocal:
 			final float lengthReciprocal = 1.0F / length;
 			
 //			Set the surface normal vector to the delta vector multiplied with the length reciprocal:
-			surfaceNormalX = dx * lengthReciprocal;
-			surfaceNormalY = dy * lengthReciprocal;
-			surfaceNormalZ = dz * lengthReciprocal;
+			final float surfaceNormalX = dx * lengthReciprocal;
+			final float surfaceNormalY = dy * lengthReciprocal;
+			final float surfaceNormalZ = dz * lengthReciprocal;
+			
+//			Update the intersections array with the surface normal vector:
+			intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 0] = surfaceNormalX;
+			intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 1] = surfaceNormalY;
+			intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 2] = surfaceNormalZ;
 		}
-		
-//		Update the intersections array with the surface normal vector:
-		intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 0] = surfaceNormalX;
-		intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 1] = surfaceNormalY;
-		intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 2] = surfaceNormalZ;
 	}
 	
 	public void updatePixel(final float samples, final float[] pixels, final int pixelOffset, final int rGBOffset, final int[] rGB) {
@@ -708,12 +761,12 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 		g = pow(g, gammaReciprocal);
 		b = pow(b, gammaReciprocal);
 		
-//		Clamp the RGB-components to the range [0.0, 1.0):
+//		Clamp the RGB-components to the range [0.0, 1.0]:
 		r = r < 0.0F ? 0.0F : r > 1.0F ? 1.0F : r;
 		g = g < 0.0F ? 0.0F : g > 1.0F ? 1.0F : g;
 		b = b < 0.0F ? 0.0F : b > 1.0F ? 1.0F : b;
 		
-//		Scale the RGB-components from [0.0, 1.0) to [0.0, 256.0) and convert them to integers:
+//		Scale the RGB-components from [0.0, 1.0] to [0.0, 255.0] and convert them to integers:
 		final int scaledR = (int)(r * 255.0F);
 		final int scaledG = (int)(g * 255.0F);
 		final int scaledB = (int)(b * 255.0F);

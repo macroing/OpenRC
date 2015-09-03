@@ -170,18 +170,18 @@ public final class Scene {
 		
 		final int[] textureOffsets = builder.calculateTextureOffsets();
 		
-		builder.addMaterial(Material.blackPlastic().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[1]));
-		builder.addMaterial(Material.blue().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
-		builder.addMaterial(Material.brass().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[1]));
-		builder.addMaterial(Material.green().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
-		builder.addMaterial(Material.obsidian().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
-		builder.addMaterial(Material.red().setSpecularPower(256.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(50.0F).setTextureOffsets(textureOffsets[1]));
+		builder.addMaterial(Material.blue().setSpecularPower(50.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.brass().setSpecularPower(50.0F).setTextureOffsets(textureOffsets[1]));
+		builder.addMaterial(Material.green().setSpecularPower(50.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.obsidian().setSpecularPower(50.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.red().setSpecularPower(50.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
 //		builder.addMaterial(new Material().setAmbientColor(0.0F, 0.0F, 0.0F).setDiffuseColor(0.0F, 0.0F, 0.0F).setSpecularColor(1.0F, 1.0F, 1.0F).setSpecularPower(32.0F).setTextureOffsets(0));
 		
-		builder.addLight(new PointLight(400.0F, -20.0F, 400.0F, 100.0F));
-//		builder.addLight(new PointLight(600.0F, 20.0F, 600.0F, 100.0F));
-//		builder.addLight(new PointLight(600.0F, 20.0F, 400.0F, 100.0F));
-//		builder.addLight(new PointLight(400.0F, 20.0F, 600.0F, 100.0F));
+		builder.addLight(new PointLight(400.0F, -800.0F, 400.0F, 100.0F));
+		builder.addLight(new PointLight(600.0F, 20.0F, 600.0F, 100.0F));
+		builder.addLight(new PointLight(600.0F, 20.0F, 400.0F, 100.0F));
+		builder.addLight(new PointLight(400.0F, 20.0F, 600.0F, 100.0F));
 		
 		final float[] materialOffsets = builder.calculateMaterialOffsets();
 		

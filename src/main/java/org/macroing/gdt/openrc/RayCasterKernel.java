@@ -111,7 +111,7 @@ public final class RayCasterKernel extends AbstractRayCasterKernel {
 //		Update the pixels with the RGB-values reset to black:
 		clearPixel(this.pixels, pixelOffset);
 		
-//		Update the origin point and direction vector of the ray to fire:
+//		Update the origin point of the ray to fire:
 		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 0] = this.camera[Camera.ABSOLUTE_OFFSET_OF_EYE + 0];
 		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 1] = this.camera[Camera.ABSOLUTE_OFFSET_OF_EYE + 1];
 		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_0 + 2] = this.camera[Camera.ABSOLUTE_OFFSET_OF_EYE + 2];
@@ -127,6 +127,7 @@ public final class RayCasterKernel extends AbstractRayCasterKernel {
 		final float u = (index % this.width - this.width * 0.5F + sampleX) * zoomReciprocal;
 		final float v = (index / this.width - this.height * 0.5F + sampleY) * zoomReciprocal;
 		
+//		Update the direction vector of the ray to fire:
 		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 0] = this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_U + 0] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_V + 0] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_W + 0] * this.camera[Camera.ABSOLUTE_OFFSET_OF_VIEW_PLANE_DISTANCE];
 		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 1] = this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_U + 1] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_V + 1] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_W + 1] * this.camera[Camera.ABSOLUTE_OFFSET_OF_VIEW_PLANE_DISTANCE];
 		this.rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 2] = this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_U + 2] * u + this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_V + 2] * v - this.camera[Camera.ABSOLUTE_OFFSET_OF_ORTHONORMAL_BASIS_W + 2] * this.camera[Camera.ABSOLUTE_OFFSET_OF_VIEW_PLANE_DISTANCE];
