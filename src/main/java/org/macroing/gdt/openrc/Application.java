@@ -52,6 +52,7 @@ import com.amd.aparapi.Kernel;
 import com.amd.aparapi.Range;
 
 public abstract class Application implements KeyListener, MouseMotionListener {
+	private final AtomicBoolean isLightUpdateRequired = new AtomicBoolean();
 	private final AtomicBoolean isRecenteringMouse = new AtomicBoolean(true);
 	private final AtomicBoolean isRunning = new AtomicBoolean();
 	private final AtomicBoolean isTextureUpdateRequired = new AtomicBoolean();
@@ -158,6 +159,10 @@ public abstract class Application implements KeyListener, MouseMotionListener {
 		doMoveMouse(e);
 	}
 	
+	public final void setLightUpdateRequired(final boolean isLightUpdateRequired) {
+		this.isLightUpdateRequired.set(isLightUpdateRequired);
+	}
+	
 	public final void setTextureUpdateRequired(final boolean isTextureUpdateRequired) {
 		this.isTextureUpdateRequired.set(isTextureUpdateRequired);
 	}
@@ -192,6 +197,10 @@ public abstract class Application implements KeyListener, MouseMotionListener {
 			
 //			Tell the API to fetch the shape indices before executing this Kernel instance (it will be transferred to the GPU every cycle):
 			this.kernel.put(this.scene.getShapeIndices());
+			
+			if(this.isLightUpdateRequired.compareAndSet(true, false)) {
+				this.kernel.put(this.scene.getLightsAsArray());
+			}
 			
 			if(this.isTextureUpdateRequired.compareAndSet(true, false)) {
 				this.kernel.put(this.scene.getTexturesAsArray());

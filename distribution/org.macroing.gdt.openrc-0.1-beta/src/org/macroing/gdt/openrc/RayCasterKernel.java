@@ -145,7 +145,6 @@ public final class RayCasterKernel extends AbstractRayCasterKernel {
 			final int materialOffset = (int)(this.shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_MATERIAL_OFFSET]);
 			
 //			Calculate the ambient and direct light:
-			attemptToAddAmbientLight(isUpdatingPick, this.intersections, this.materials, this.pick, this.pixels, this.shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, this.textures);
 			attemptToAddDirectLight(isUpdatingPick, this.intersections, this.lights, this.materials, this.pick, this.pixels, this.rays, this.shapes, intersectionOffset, this.lightsLength, materialOffset, pixelOffset, rayOffset, this.shapeIndicesLength, shapeOffset, this.shapeIndices, this.textures);
 		}
 		

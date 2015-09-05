@@ -143,6 +143,7 @@ public final class Texture {
 		try {
 			return createSolidTexture(Texture.class.getResourceAsStream(name));
 		} catch(final Exception e) {
+			e.printStackTrace();
 			return Texture.createSolidTexture();
 		}
 	}

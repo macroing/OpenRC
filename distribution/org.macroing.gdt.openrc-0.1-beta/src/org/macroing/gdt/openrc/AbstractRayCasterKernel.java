@@ -18,6 +18,8 @@
  */
 package org.macroing.gdt.openrc;
 
+import static org.macroing.gdt.openrc.Mathematics.PI;
+
 import org.macroing.gdt.openrc.geometry.Intersection;
 import org.macroing.gdt.openrc.geometry.Light;
 import org.macroing.gdt.openrc.geometry.Material;
@@ -31,6 +33,7 @@ import org.macroing.gdt.openrc.geometry.Triangle;
 import com.amd.aparapi.Kernel;
 
 public abstract class AbstractRayCasterKernel extends Kernel {
+	public static final float PI_RECIPROCAL = 1.0F / PI;
 	public static final float RGB_RECIPROCAL = 1.0F / 255.0F;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -244,7 +247,7 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 		return sqrt(lengthSquared(vector, offset));
 	}
 	
-	public void attemptToAddAmbientLight(final boolean isUpdatingPick, final float[] intersections, final float[] materials, final float[] pick, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int[] textures) {
+	public void addAmbientLightBRDF(final boolean isUpdatingPick, final float[] intersections, final float[] materials, final float[] pick, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int[] textures) {
 //		Get the ambient intensity:
 		final float ambientIntensity = materials[materialOffset + Material.RELATIVE_OFFSET_OF_AMBIENT_INTENSITY];
 		
@@ -254,83 +257,80 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 			final float ambientColorG = materials[materialOffset + Material.RELATIVE_OFFSET_OF_AMBIENT_COLOR + 1];
 			final float ambientColorB = materials[materialOffset + Material.RELATIVE_OFFSET_OF_AMBIENT_COLOR + 2];
 			
-//			Reset the temporary pixel buffer:
-			pixels[pixelOffset + 3] = 0.0F;
-			pixels[pixelOffset + 4] = 0.0F;
-			pixels[pixelOffset + 5] = 0.0F;
-			
-//			Perform texture mapping on the shape:
 			performTextureMapping(isUpdatingPick, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textures);
 			
-//			Add the RGB-components of the ambient color multiplied by the ambient intensity, to the pixel:
-			pixels[pixelOffset + 0] += (ambientColorR + pixels[pixelOffset + 3]) * ambientIntensity;
-			pixels[pixelOffset + 1] += (ambientColorG + pixels[pixelOffset + 4]) * ambientIntensity;
-			pixels[pixelOffset + 2] += (ambientColorB + pixels[pixelOffset + 5]) * ambientIntensity;
+//			Add the RGB-components of the specular color multiplied by the specular component, to the pixel:
+			pixels[pixelOffset + 0] = (pixels[pixelOffset + 0] + ambientColorR) * ambientIntensity;
+			pixels[pixelOffset + 1] = (pixels[pixelOffset + 1] + ambientColorG) * ambientIntensity;
+			pixels[pixelOffset + 2] = (pixels[pixelOffset + 2] + ambientColorB) * ambientIntensity;
 		}
 	}
 	
-	public void attemptToAddDiffuseReflectionFromPointLight(final boolean isUpdatingPick, final float shade, final float[] intersections, final float[] lights, final float[] materials, final float[] pick, final float[] pixels, final float[] shapes, final int intersectionOffset, final int lightOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int[] textures) {
+	public void addDiffuseLightBRDF(final boolean isUpdatingPick, final float[] intersections, final float[] materials, final float[] pick, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int[] textures) {
 //		Get the diffuse intensity:
 		final float diffuseIntensity = materials[materialOffset + Material.RELATIVE_OFFSET_OF_DIFFUSE_INTENSITY];
 		
 		if(diffuseIntensity > 0.0F) {
-//			Get the RGB-components for the diffuse color:
+//			Get the RGB-components for the specular color:
 			final float diffuseColorR = materials[materialOffset + Material.RELATIVE_OFFSET_OF_DIFFUSE_COLOR + 0];
 			final float diffuseColorG = materials[materialOffset + Material.RELATIVE_OFFSET_OF_DIFFUSE_COLOR + 1];
 			final float diffuseColorB = materials[materialOffset + Material.RELATIVE_OFFSET_OF_DIFFUSE_COLOR + 2];
 			
-//			Get the location from the point light:
-			final float pointLightX = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POSITION + 0];
-			final float pointLightY = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POSITION + 1];
-			final float pointLightZ = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POSITION + 2];
+			performTextureMapping(isUpdatingPick, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textures);
 			
-//			Get the surface intersection point:
-			final float surfaceIntersectionX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 0];
-			final float surfaceIntersectionY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 1];
-			final float surfaceIntersectionZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 2];
+//			Add the RGB-components of the specular color multiplied by the specular component, to the pixel:
+			pixels[pixelOffset + 0] = (pixels[pixelOffset + 0] + diffuseColorR) * diffuseIntensity * PI_RECIPROCAL;
+			pixels[pixelOffset + 1] = (pixels[pixelOffset + 1] + diffuseColorG) * diffuseIntensity * PI_RECIPROCAL;
+			pixels[pixelOffset + 2] = (pixels[pixelOffset + 2] + diffuseColorB) * diffuseIntensity * PI_RECIPROCAL;
+		}
+	}
+	
+	public void addSpecularLightBRDF(final boolean isUpdatingPick, final float surfaceNormalX, final float surfaceNormalY, final float surfaceNormalZ, final float wiX, final float wiY, final float wiZ, final float woX, final float woY, final float woZ, final float[] intersections, final float[] materials, final float[] pick, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int[] textures) {
+//		Get the specular intensity:
+		final float specularIntensity = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_INTENSITY];
+		
+		if(specularIntensity > 0.0F) {
+//			Calculate the dot product between the surface normal and the incident vector:
+			final float surfaceNormalDotWi = surfaceNormalX * wiX + surfaceNormalY * wiY + surfaceNormalZ * wiZ;
 			
-//			Get the surface normal on the surface intersection point:
-			final float surfaceNormalX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 0];
-			final float surfaceNormalY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 1];
-			final float surfaceNormalZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 2];
-			
-//			Calculate the direction from the surface intersection point of the shape and the location of the point light:
-			float directionX = pointLightX - surfaceIntersectionX;
-			float directionY = pointLightY - surfaceIntersectionY;
-			float directionZ = pointLightZ - surfaceIntersectionZ;
-			
-//			Calculate the length reciprocal of the direction vector:
-			final float lengthReciprocal = 1.0F / sqrt(directionX * directionX + directionY * directionY + directionZ * directionZ);
-			
-//			Multiply the direction with the reciprocal of the length to normalize it:
-			directionX *= lengthReciprocal;
-			directionY *= lengthReciprocal;
-			directionZ *= lengthReciprocal;
-			
-//			Calculate the dot product as the dot product of the direction and the surface normal, or 0.0 if less than that:
-			final float dotProduct = directionX * surfaceNormalX + directionY * surfaceNormalY + directionZ * surfaceNormalZ;
-			
-			if(dotProduct > 0.0F) {
-//				Calculate the diffuse component as the dot product multiplied with the diffuse intensity multiplied by the shade:
-				final float diffuseComponent = dotProduct * diffuseIntensity * shade;
+			if(surfaceNormalDotWi > 0.0F) {
+//				Calculate the reflection vector:
+				final float rX = -wiX + (2.0F * surfaceNormalX * surfaceNormalDotWi);
+				final float rY = -wiY + (2.0F * surfaceNormalY * surfaceNormalDotWi);
+				final float rZ = -wiZ + (2.0F * surfaceNormalZ * surfaceNormalDotWi);
 				
-//				Reset the temporary pixel buffer:
-				pixels[pixelOffset + 3] = 0.0F;
-				pixels[pixelOffset + 4] = 0.0F;
-				pixels[pixelOffset + 5] = 0.0F;
+//				Calculate the dot product between the reflection vector and the outgoing vector:
+				final float rDotWo = rX * woX + rY * woY + rZ * woZ;
 				
-//				Perform texture mapping on the shape:
-				performTextureMapping(isUpdatingPick, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textures);
-				
-//				Add the RGB-components of the diffuse color multiplied by the diffuse component, to the pixel:
-				pixels[pixelOffset + 0] += (diffuseColorR + pixels[pixelOffset + 3]) * diffuseComponent;
-				pixels[pixelOffset + 1] += (diffuseColorG + pixels[pixelOffset + 4]) * diffuseComponent;
-				pixels[pixelOffset + 2] += (diffuseColorB + pixels[pixelOffset + 5]) * diffuseComponent;
+				if(rDotWo > 0.0F) {
+//					Get the RGB-components for the specular color:
+					final float specularColorR = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_COLOR + 0];
+					final float specularColorG = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_COLOR + 1];
+					final float specularColorB = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_COLOR + 2];
+					
+					performTextureMapping(isUpdatingPick, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textures);
+					
+//					Get the specular power and intensity and calculate the specular component:
+					final float specularPower = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_POWER];
+					final float specularComponent = pow(rDotWo, specularPower) * specularIntensity;
+					
+//					Add the RGB-components of the specular color multiplied by the specular component, to the pixel:
+					pixels[pixelOffset + 0] = (pixels[pixelOffset + 0] + specularColorR) * specularComponent;
+					pixels[pixelOffset + 1] = (pixels[pixelOffset + 1] + specularColorG) * specularComponent;
+					pixels[pixelOffset + 2] = (pixels[pixelOffset + 2] + specularColorB) * specularComponent;
+				}
 			}
 		}
 	}
 	
 	public void attemptToAddDirectLight(final boolean isUpdatingPick, final float[] intersections, final float[] lights, final float[] materials, final float[] pick, final float[] pixels, final float[] rays, final float[] shapes, final int intersectionOffset, final int lightsLength, final int materialOffset, final int pixelOffset, final int rayOffset, final int shapeIndicesLength, final int shapeOffset, final int[] shapeIndices, final int[] textures) {
+//		Get the outgoing direction vector:
+		final float woX = -rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 0];
+		final float woY = -rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 1];
+		final float woZ = -rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 2];
+		
+		addAmbientLightBRDF(isUpdatingPick, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textures);
+		
 		for(int i = 0, j = 0; i < lightsLength; i += j) {
 //			Initialize the temporary type and size variables of the current light:
 			final float lightType = lights[i + Light.RELATIVE_OFFSET_OF_TYPE];
@@ -343,151 +343,77 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 				final float shade = calculateShadeForPointLight(isUpdatingPick, intersections, lights, pick, rays, shapes, intersectionOffset, i, rayOffset, shapeIndicesLength, shapeIndices);
 				
 				if(shade > 0.0F) {
-					attemptToAddDiffuseReflectionFromPointLight(isUpdatingPick, shade, intersections, lights, materials, pick, pixels, shapes, intersectionOffset, i, materialOffset, pixelOffset, shapeOffset, textures);
-					attemptToAddSpecularReflectionFromPointLight(shade, intersections, lights, materials, pixels, rays, intersectionOffset, i, materialOffset, pixelOffset, rayOffset);
+//					Get the location from the point light:
+					final float pointLightX = lights[i + PointLight.RELATIVE_OFFSET_OF_POSITION + 0];
+					final float pointLightY = lights[i + PointLight.RELATIVE_OFFSET_OF_POSITION + 1];
+					final float pointLightZ = lights[i + PointLight.RELATIVE_OFFSET_OF_POSITION + 2];
+					
+//					Get the surface intersection point:
+					final float surfaceIntersectionX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 0];
+					final float surfaceIntersectionY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 1];
+					final float surfaceIntersectionZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 2];
+					
+//					Get the surface normal on the surface intersection point:
+					final float surfaceNormalX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 0];
+					final float surfaceNormalY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 1];
+					final float surfaceNormalZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 2];
+					
+//					Calculate the incident direction vector:
+					float wiX = pointLightX - surfaceIntersectionX;
+					float wiY = pointLightY - surfaceIntersectionY;
+					float wiZ = pointLightZ - surfaceIntersectionZ;
+					
+//					Calculate the length reciprocal of the incident vector:
+					final float lengthReciprocalWi = 1.0F / sqrt(wiX * wiX + wiY * wiY + wiZ * wiZ);
+					
+//					Multiply the incident vector with the reciprocal of the length to normalize it:
+					wiX *= lengthReciprocalWi;
+					wiY *= lengthReciprocalWi;
+					wiZ *= lengthReciprocalWi;
+					
+//					Calculate the dot product between the surface normal and the incident vector:
+					final float surfaceNormalDotWi = surfaceNormalX * wiX + surfaceNormalY * wiY + surfaceNormalZ * wiZ;
+					
+					if(surfaceNormalDotWi > 0.0F) {
+//						Save the current RGB-components for later use:
+						final float r0 = pixels[pixelOffset + 0];
+						final float g0 = pixels[pixelOffset + 1];
+						final float b0 = pixels[pixelOffset + 2];
+						
+//						Reset the pixel array so we can add the diffuse color:
+						pixels[pixelOffset + 0] = 0.0F;
+						pixels[pixelOffset + 1] = 0.0F;
+						pixels[pixelOffset + 2] = 0.0F;
+						
+//						Calculate and add the diffuse color to the pixel array:
+						addDiffuseLightBRDF(isUpdatingPick, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textures);
+						
+//						Save the diffuse color for later use:
+						final float r1 = pixels[pixelOffset + 0];
+						final float g1 = pixels[pixelOffset + 1];
+						final float b1 = pixels[pixelOffset + 2];
+						
+//						Reset the pixel array so we can add the specular color:
+						pixels[pixelOffset + 0] = 0.0F;
+						pixels[pixelOffset + 1] = 0.0F;
+						pixels[pixelOffset + 2] = 0.0F;
+						
+//						Calculate and add the specular color to the pixel array:
+						addSpecularLightBRDF(isUpdatingPick, surfaceNormalX, surfaceNormalY, surfaceNormalZ, wiX, wiY, wiZ, woX, woY, woZ, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textures);
+						
+//						Save the specular color for later use:
+						final float r2 = pixels[pixelOffset + 0];
+						final float g2 = pixels[pixelOffset + 1];
+						final float b2 = pixels[pixelOffset + 2];
+						
+//						Update the pixel array with the correct color:
+						pixels[pixelOffset + 0] = r0 + ((r1 + r2) * surfaceNormalDotWi);
+						pixels[pixelOffset + 1] = g0 + ((g1 + g2) * surfaceNormalDotWi);
+						pixels[pixelOffset + 2] = b0 + ((b1 + b2) * surfaceNormalDotWi);
+					}
 				}
 			}
 		}
-	}
-	
-	public void attemptToAddSpecularReflectionFromPointLight(final float shade, final float[] intersections, final float[] lights, final float[] materials, final float[] pixels, final float[] rays, final int intersectionOffset, final int lightOffset, final int materialOffset, final int pixelOffset, final int rayOffset) {
-		final float specularIntensity = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_INTENSITY];
-		
-		if(specularIntensity > 0.0F) {
-			final float pointLightX = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POSITION + 0];
-			final float pointLightY = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POSITION + 1];
-			final float pointLightZ = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POSITION + 2];
-			
-			float surfaceIntersectionX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 0];
-			float surfaceIntersectionY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 1];
-			float surfaceIntersectionZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 2];
-			
-			float surfaceNormalX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 0];
-			float surfaceNormalY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 1];
-			float surfaceNormalZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 2];
-			
-			float woX = -rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 0];
-			float woY = -rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 1];
-			float woZ = -rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 2];
-			
-			float wiX = pointLightX - surfaceIntersectionX;
-			float wiY = pointLightY - surfaceIntersectionY;
-			float wiZ = pointLightZ - surfaceIntersectionZ;
-			
-			float lengthReciprocalWi = 1.0F / sqrt(wiX * wiX + wiY * wiY + wiZ * wiZ);
-			
-			wiX *= lengthReciprocalWi;
-			wiY *= lengthReciprocalWi;
-			wiZ *= lengthReciprocalWi;
-			
-			float surfaceNormalDotWi = surfaceNormalX * wiX + surfaceNormalY * wiY + surfaceNormalZ * wiZ;
-			
-			if(surfaceNormalDotWi > 0.0F) {
-				float rX = -wiX + (2.0F * surfaceNormalX * surfaceNormalDotWi);
-				float rY = -wiY + (2.0F * surfaceNormalY * surfaceNormalDotWi);
-				float rZ = -wiZ + (2.0F * surfaceNormalZ * surfaceNormalDotWi);
-				
-				float rDotWo = rX * woX + rY * woY + rZ * woZ;
-				
-				if(rDotWo > 0.0F) {
-//					Get the RGB-components for the specular color:
-					final float specularColorR = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_COLOR + 0];
-					final float specularColorG = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_COLOR + 1];
-					final float specularColorB = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_COLOR + 2];
-					
-//					Get the specular power and calculate the specular component:
-					final float specularPower = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_POWER];
-					final float specularComponent = pow(rDotWo, specularPower) * specularIntensity * shade;
-					
-//					Add the RGB-components of the specular color multiplied by the specular component, to the pixel:
-					pixels[pixelOffset + 0] += specularColorR * specularComponent;
-					pixels[pixelOffset + 1] += specularColorG * specularComponent;
-					pixels[pixelOffset + 2] += specularColorB * specularComponent;
-				}
-			}
-		}
-		
-		/*
-//		Get the specular intensity:
-		final float specularIntensity = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_INTENSITY];
-		
-		if(specularIntensity > 0.0F) {
-//			Get the location from the point light:
-			final float pointLightX = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POSITION + 0];
-			final float pointLightY = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POSITION + 1];
-			final float pointLightZ = lights[lightOffset + PointLight.RELATIVE_OFFSET_OF_POSITION + 2];
-			
-//			Get the RGB-components for the specular color:
-			final float specularColorR = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_COLOR + 0];
-			final float specularColorG = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_COLOR + 1];
-			final float specularColorB = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_COLOR + 2];
-			
-//			Get the surface intersection point:
-			final float surfaceIntersectionX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 0];
-			final float surfaceIntersectionY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 1];
-			final float surfaceIntersectionZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 2];
-			
-//			Get the surface normal on the surface intersection point:
-			float surfaceNormalX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 0];
-			float surfaceNormalY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 1];
-			float surfaceNormalZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 2];
-			
-//			Calculate the direction from the surface intersection point of the shape to the location of the point light:
-			float directionX = surfaceIntersectionX - pointLightX;
-			float directionY = surfaceIntersectionY - pointLightY;
-			float directionZ = surfaceIntersectionZ - pointLightZ;
-			
-//			Calculate the length reciprocal of the direction vector:
-			float lengthReciprocal = 1.0F / sqrt(directionX * directionX + directionY * directionY + directionZ * directionZ);
-			
-//			Multiply the direction with the reciprocal of the length to normalize it:
-			directionX *= lengthReciprocal;
-			directionY *= lengthReciprocal;
-			directionZ *= lengthReciprocal;
-			
-//			Calculate the dot product as the negative dot product of the direction and the surface normal:
-			float dotProduct = -(directionX * surfaceNormalX + directionY * surfaceNormalY + directionZ * surfaceNormalZ);
-			
-			if(dotProduct > 0.0F) {
-//				Calculate the dot product multiplied by 2:
-				final float dotProductMultipliedByTwo = dotProduct * 2.0F;
-				
-//				Multiply the surface normal with the dot product multiplied by 2:
-				surfaceNormalX *= dotProductMultipliedByTwo;
-				surfaceNormalY *= dotProductMultipliedByTwo;
-				surfaceNormalZ *= dotProductMultipliedByTwo;
-				
-//				Add the direction to the surface normal:
-				surfaceNormalX += directionX;
-				surfaceNormalY += directionY;
-				surfaceNormalZ += directionZ;
-				
-//				Calculate the length reciprocal of the surface normal vector:
-				lengthReciprocal = 1.0F / sqrt(surfaceNormalX * surfaceNormalX + surfaceNormalY * surfaceNormalY + surfaceNormalZ * surfaceNormalZ);
-				
-//				Multiply the surface normal with the reciprocal of the length to normalize it:
-				surfaceNormalX *= lengthReciprocal;
-				surfaceNormalY *= lengthReciprocal;
-				surfaceNormalZ *= lengthReciprocal;
-				
-//				Calculate the dot product as the negative dot product between the direction and the surface normal:
-				dotProduct = -(directionX * surfaceNormalX + directionY * surfaceNormalY + directionZ * surfaceNormalZ);
-				
-//				Initialize some minimum and maximum values:
-				final float minimumValue = 0.0F;
-				final float maximumValue = max(dotProduct, minimumValue);
-				
-//				Get the specular power and calculate the specular component:
-				final float specularPower = materials[materialOffset + Material.RELATIVE_OFFSET_OF_SPECULAR_POWER];
-				final float specularComponent = pow(maximumValue, specularPower) * specularIntensity * shade;
-				
-//				Add the RGB-components of the specular color multiplied by the specular component, to the pixel:
-				pixels[pixelOffset + 0] += specularColorR * specularComponent;
-				pixels[pixelOffset + 1] += specularColorG * specularComponent;
-				pixels[pixelOffset + 2] += specularColorB * specularComponent;
-			}
-		}
-		*/
 	}
 	
 	public void normalize(final float[] vector, final int offset) {
@@ -605,9 +531,9 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 		}
 		
 //		Update the RGB-values of the pixels array:
-		pixels[pixelOffset + 3] += r;
-		pixels[pixelOffset + 4] += g;
-		pixels[pixelOffset + 5] += b;
+		pixels[pixelOffset + 0] += r;
+		pixels[pixelOffset + 1] += g;
+		pixels[pixelOffset + 2] += b;
 	}
 	
 	public void performSphericalTextureMapping(final boolean isUpdatingPick, final float[] intersections, final float[] materials, final float[] pick, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int textureOffset, final int[] textures) {
@@ -663,9 +589,9 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 		}
 		
 //		Update the RGB-values of the pixels array:
-		pixels[pixelOffset + 3] += r;
-		pixels[pixelOffset + 4] += g;
-		pixels[pixelOffset + 5] += b;
+		pixels[pixelOffset + 0] += r;
+		pixels[pixelOffset + 1] += g;
+		pixels[pixelOffset + 2] += b;
 		
 		if(isUpdatingPick) {
 			pick[Constants.RELATIVE_OFFSET_OF_PICK_TEXTURE_OFFSET] = textureOffset;

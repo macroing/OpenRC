@@ -183,6 +183,16 @@ public final class TestGame extends Application {
 		if(isKeyPressed(KeyEvent.VK_W)) {
 			camera.moveBackward(movement);
 		}
+		
+		final Scene scene = getScene();
+		
+		final float[] lights = scene.getLightsAsArray();
+		
+		lights[2] = camera.getEyeX() + (camera.getLookAtX() - camera.getEyeX()) * 50.0F;
+		lights[3] = camera.getEyeY() + (camera.getLookAtY() - camera.getEyeY()) * 50.0F;
+		lights[4] = camera.getEyeZ() + (camera.getLookAtZ() - camera.getEyeZ()) * 50.0F;
+		
+		setLightUpdateRequired(true);
 	}
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////

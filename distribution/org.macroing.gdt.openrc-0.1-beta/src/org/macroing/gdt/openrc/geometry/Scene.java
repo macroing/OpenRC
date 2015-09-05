@@ -161,36 +161,43 @@ public final class Scene {
 	public static Scene create(final Camera camera) {
 		final
 		Builder builder = new Builder(Objects.requireNonNull(camera, "camera == null"));
-		builder.addTexture(Texture.createSolidTexture("Texture_0.jpg"));
+//		builder.addTexture(Texture.createSolidTexture("Texture_0.jpg"));
 //		builder.addTexture(Texture.createSolidTexture("Texture_1.png"));
 		builder.addTexture(Texture.createSolidTexture("Texture_2.png"));
 //		builder.addTexture(Texture.createSolidTexture("Texture_3.png"));
 //		builder.addTexture(Texture.createDecalTexture("Texture_4.png"));
 		builder.addTexture(Texture.createSolidTexture("Texture_5.jpg"));
+		builder.addTexture(Texture.createSolidTexture("Texture_6.jpg"));
+		builder.addTexture(Texture.createSolidTexture("Texture_7.jpg"));
+		builder.addTexture(Texture.createSolidTexture("Texture_8.jpg"));
+		builder.addTexture(Texture.createSolidTexture("Texture_9.jpg"));
 		
 		final int[] textureOffsets = builder.calculateTextureOffsets();
 		
-		builder.addMaterial(Material.blackPlastic().setSpecularPower(50.0F).setTextureOffsets(textureOffsets[1]));
-		builder.addMaterial(Material.blue().setSpecularPower(50.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
-		builder.addMaterial(Material.brass().setSpecularPower(50.0F).setTextureOffsets(textureOffsets[1]));
-		builder.addMaterial(Material.green().setSpecularPower(50.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
-		builder.addMaterial(Material.obsidian().setSpecularPower(50.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
-		builder.addMaterial(Material.red().setSpecularPower(50.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[5]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[4]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
 //		builder.addMaterial(new Material().setAmbientColor(0.0F, 0.0F, 0.0F).setDiffuseColor(0.0F, 0.0F, 0.0F).setSpecularColor(1.0F, 1.0F, 1.0F).setSpecularPower(32.0F).setTextureOffsets(0));
 		
-		builder.addLight(new PointLight(400.0F, -800.0F, 400.0F, 100.0F));
-		builder.addLight(new PointLight(600.0F, 20.0F, 600.0F, 100.0F));
-		builder.addLight(new PointLight(600.0F, 20.0F, 400.0F, 100.0F));
-		builder.addLight(new PointLight(400.0F, 20.0F, 600.0F, 100.0F));
+		builder.addLight(new PointLight(0.0F, 0.0F, 0.0F, 100.0F));
+		builder.addLight(new PointLight(200.0F, -800.0F, 400.0F, 100.0F));
+//		builder.addLight(new PointLight(600.0F, 20.0F, 600.0F, 100.0F));
+//		builder.addLight(new PointLight(600.0F, 20.0F, 400.0F, 100.0F));
+//		builder.addLight(new PointLight(400.0F, 20.0F, 600.0F, 100.0F));
 		
 		final float[] materialOffsets = builder.calculateMaterialOffsets();
 		
-		for(int i = 0; i < 50; i++) {
+		for(int i = 0; i < 10; i++) {
 			builder.addShape(Sphere.random(materialOffsets[doRandom(materialOffsets.length)]));
 		}
 		
-		builder.addShape(new Plane(materialOffsets[2], 0.5F, 0.0F, 0.5F));
+//		builder.addShape(new Plane(materialOffsets[2], 0.5F, 0.0F, 0.5F));
 		builder.addShape(new Triangle(materialOffsets[0], 2500.0F, 40.0F, 2500.0F, 1000.0F, 40.0F, 1500.0F, -1000.0F, 40.0F, -1000.0F));
+		builder.addShape(new Triangle(materialOffsets[1], -1000.0F, 40.0F, -1000.0F, 1000.0F, -2500.0F, 1500.0F, 2500.0F, 40.0F, 2500.0F));
 		
 		final Scene scene = builder.build();
 		
