@@ -46,7 +46,7 @@ public final class Material {
 	private float ambientColorB = 1.0F / 255.0F;
 	private float ambientColorG = 1.0F / 255.0F;
 	private float ambientColorR = 1.0F / 255.0F;
-	private float ambientIntensity = 0.01F;
+	private float ambientIntensity = 0.1F;
 	private float diffuseColorA = 255.0F / 255.0F;
 	private float diffuseColorB = 32.0F / 255.0F;
 	private float diffuseColorG = 32.0F / 255.0F;

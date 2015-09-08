@@ -6,7 +6,7 @@ Because of the name, Open Ray Caster, some of you might believe Ray Casting is t
 
 The program runs a portion of its code on the GPU to speed things up, as previously mentioned. It does this using OpenCL, via a Java library called Aparapi. So OpenRC is written exclusively in Java. At least for now.
 
-![alt text](https://github.com/macroing/OpenRC/blob/master/images/OpenRC_10.png "OpenRC")
+![alt text](https://github.com/macroing/OpenRC/blob/master/images/OpenRC_11.png "OpenRC")
 
 This program is provided by Macroing.org.
 

@@ -136,7 +136,7 @@ public final class RayCasterKernel extends AbstractRayCasterKernel {
 		normalize(this.rays, rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0);
 		
 //		Calculate the distance to the closest shape, if any:
-		final float distance = findIntersection(true, true, isUpdatingPick, this.intersections, this.pick, this.rays, this.shapes, this.shapeIndicesLength, this.shapeIndices);
+		final float distance = findIntersection(true, isUpdatingPick, this.intersections, this.pick, this.rays, this.shapes, this.shapeIndicesLength, this.shapeIndices);
 		
 		if(distance > 0.0F && distance < Constants.MAXIMUM_DISTANCE) {
 //			Initialize needed offset values:

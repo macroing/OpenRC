@@ -83,7 +83,7 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 		final float distance0 = sqrt(deltaX * deltaX + deltaY * deltaY + deltaZ * deltaZ);
 		
 //		Calculate the distance between the surface intersection point and the closest intersecting shape:
-		final float distance1 = findIntersection(false, false, isUpdatingPick, intersections, pick, rays, shapes, shapeIndicesLength, shapeIndices);
+		final float distance1 = findIntersectionFirst(intersections, pick, rays, shapes, shapeIndicesLength, shapeIndices);
 		
 //		Calculate the shade as 1.0 if, and only if, the distance between the surface intersection point and the point light is less than the distance between the surface intersection point and the closest intersecting shape, 0.0 otherwise:
 		final float shade = distance0 < distance1 ? 1.0F : 0.0F;
@@ -91,7 +91,7 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 		return shade;
 	}
 	
-	public float findIntersection(final boolean isPrimaryIntersection, final boolean isUpdatingIntersection, final boolean isUpdatingPick, final float[] intersections, final float[] pick, final float[] rays, final float[] shapes, final int shapeIndicesLength, final int[] shapeIndices) {
+	public float findIntersection(final boolean isPrimaryIntersection, final boolean isUpdatingPick, final float[] intersections, final float[] pick, final float[] rays, final float[] shapes, final int shapeIndicesLength, final int[] shapeIndices) {
 //		Initialize the index and offset values:
 		final int index = getGlobalId();
 		final int intersectionOffset = index * Intersection.SIZE;
@@ -114,11 +114,9 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 		final float rayDirectionY = rays[rayOffset + rayDirectionOffset + 1];
 		final float rayDirectionZ = rays[rayOffset + rayDirectionOffset + 2];
 		
-		if(isUpdatingIntersection) {
-//			Reset the float array intersections, so we can perform a new intersection test:
-			intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SHAPE_OFFSET] = -1.0F;
-			intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_DISTANCE] = Constants.MAXIMUM_DISTANCE;
-		}
+//		Reset the float array intersections, so we can perform a new intersection test:
+		intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SHAPE_OFFSET] = -1.0F;
+		intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_DISTANCE] = Constants.MAXIMUM_DISTANCE;
 		
 		for(int i = 0, shapeOffset = shapeIndices[i]; i < shapeIndicesLength && shapeOffset >= 0; i++, shapeOffset = shapeIndices[min(i, shapeIndicesLength - 1)]) {
 //			Initialize the temporary type and size variables of the current shape:
@@ -150,7 +148,7 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 			}
 		}
 		
-		if(shapeClosestOffset > -1 && isUpdatingIntersection) {
+		if(shapeClosestOffset > -1) {
 //			Update the intersections array with values found:
 			intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SHAPE_OFFSET] = shapeClosestOffset;
 			intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_DISTANCE] = shapeClosestDistance;
@@ -171,6 +169,61 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 			if(shapes[shapeClosestOffset + Shape.RELATIVE_OFFSET_OF_TYPE] == Triangle.TYPE) {
 //				Update the intersections array with the surface normal of the intersected triangle:
 				updateSurfaceNormalForTriangle(intersections, shapes, intersectionOffset, shapeClosestOffset);
+			}
+		}
+		
+		return shapeClosestDistance;
+	}
+	
+	public float findIntersectionFirst(final float[] intersections, final float[] pick, final float[] rays, final float[] shapes, final int shapeIndicesLength, final int[] shapeIndices) {
+//		Initialize the index and offset values:
+		final int index = getGlobalId();
+		final int rayOffset = index * Constants.SIZE_OF_RAY;
+		
+//		Initialize offset to closest shape:
+		int shapeClosestOffset = -1;
+		
+//		Initialize distance to closest shape:
+		float shapeClosestDistance = Constants.MAXIMUM_DISTANCE;
+		
+		final int rayOriginOffset = Constants.RELATIVE_OFFSET_OF_RAY_ORIGIN_1;
+		final int rayDirectionOffset = Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_1;
+		
+//		Initialize the ray values (origin and direction):
+		final float rayOriginX = rays[rayOffset + rayOriginOffset + 0];
+		final float rayOriginY = rays[rayOffset + rayOriginOffset + 1];
+		final float rayOriginZ = rays[rayOffset + rayOriginOffset + 2];
+		final float rayDirectionX = rays[rayOffset + rayDirectionOffset + 0];
+		final float rayDirectionY = rays[rayOffset + rayDirectionOffset + 1];
+		final float rayDirectionZ = rays[rayOffset + rayDirectionOffset + 2];
+		
+		for(int i = 0, shapeOffset = shapeIndices[i]; shapeClosestOffset == -1 && i < shapeIndicesLength && shapeOffset >= 0; i++, shapeOffset = shapeIndices[min(i, shapeIndicesLength - 1)]) {
+//			Initialize the temporary type and size variables of the current shape:
+			final float shapeType = shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_TYPE];
+//			final float shapeSize = shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_SIZE];
+			
+//			Initialize the shape distance to the maximum value:
+			float shapeDistance = Constants.MAXIMUM_DISTANCE;
+			
+			if(shapeType == Plane.TYPE) {
+//				Update the shape distance based on the intersected plane:
+				shapeDistance = findIntersectionForPlane(rayOriginX, rayOriginY, rayOriginZ, rayDirectionX, rayDirectionY, rayDirectionZ, shapes, shapeOffset);
+			}
+			
+			if(shapeType == Sphere.TYPE) {
+//				Update the shape distance based on the intersected sphere:
+				shapeDistance = findIntersectionForSphere(rayOriginX, rayOriginY, rayOriginZ, rayDirectionX, rayDirectionY, rayDirectionZ, shapes, shapeOffset);
+			}
+			
+			if(shapeType == Triangle.TYPE) {
+//				Update the shape distance based on the intersected triangle:
+				shapeDistance = findIntersectionForTriangle(rayOriginX, rayOriginY, rayOriginZ, rayDirectionX, rayDirectionY, rayDirectionZ, shapes, shapeOffset);
+			}
+			
+			if(shapeDistance > 0.0F && shapeDistance < shapeClosestDistance) {
+//				Update the distance to and the offset of the closest shape:
+				shapeClosestDistance = shapeDistance;
+				shapeClosestOffset = shapeOffset;
 			}
 		}
 		
@@ -329,6 +382,8 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 		final float woY = -rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 1];
 		final float woZ = -rays[rayOffset + Constants.RELATIVE_OFFSET_OF_RAY_DIRECTION_0 + 2];
 		
+		performNormalMapping(isUpdatingPick, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textures);
+		
 		addAmbientLightBRDF(isUpdatingPick, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textures);
 		
 		for(int i = 0, j = 0; i < lightsLength; i += j) {
@@ -426,7 +481,147 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 		vector[offset + 2] *= lengthReciprocal;
 	}
 	
+	public void performNormalMapping(final boolean isUpdatingPick, final float[] intersections, final float[] materials, final float[] pick, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int[] textures) {
+//		Initialize the texture count:
+		final int textureCount = (int)(materials[materialOffset + Material.RELATIVE_OFFSET_OF_TEXTURE_COUNT]);
+		
+		if(textureCount > 0) {
+			if(shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_TYPE] == Sphere.TYPE) {
+				for(int i = 0; i < textureCount; i++) {
+//					Initialize the texture offset:
+					final int textureOffset = (int)(materials[materialOffset + Material.RELATIVE_OFFSET_OF_TEXTURE_COUNT + i + 1]);
+					
+//					Perform spherical normal mapping on the sphere:
+					performSphericalNormalMapping(isUpdatingPick, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textureOffset, textures);
+				}
+			}
+			
+			if(shapes[shapeOffset + Shape.RELATIVE_OFFSET_OF_TYPE] == Triangle.TYPE) {
+				for(int i = 0; i < textureCount; i++) {
+//					Initialize the texture offset:
+					final int textureOffset = (int)(materials[materialOffset + Material.RELATIVE_OFFSET_OF_TEXTURE_COUNT + i + 1]);
+					
+//					Perform normal mapping on a triangle:
+					performPlanarTriangleNormalMapping(isUpdatingPick, intersections, materials, pick, pixels, shapes, intersectionOffset, materialOffset, pixelOffset, shapeOffset, textureOffset, textures);
+				}
+			}
+		}
+	}
+	
+	public void performPlanarTriangleNormalMapping(final boolean isUpdatingPick, final float[] intersections, final float[] materials, final float[] pick, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int textureOffset, final int[] textures) {
+		if(textures[textureOffset + Texture.RELATIVE_OFFSET_OF_TYPE] == Texture.TYPE_NORMAL_MAP) {
+//			Initialize the variables with the position (the X-, Y- and Z-values) of the triangle:
+			final float triangleAX = shapes[shapeOffset + Triangle.RELATIVE_OFFSET_OF_A + 0];
+			final float triangleAY = shapes[shapeOffset + Triangle.RELATIVE_OFFSET_OF_A + 1];
+			final float triangleAZ = shapes[shapeOffset + Triangle.RELATIVE_OFFSET_OF_A + 2];
+			final float triangleBX = shapes[shapeOffset + Triangle.RELATIVE_OFFSET_OF_B + 0];
+			final float triangleBY = shapes[shapeOffset + Triangle.RELATIVE_OFFSET_OF_B + 1];
+			final float triangleBZ = shapes[shapeOffset + Triangle.RELATIVE_OFFSET_OF_B + 2];
+			final float triangleCX = shapes[shapeOffset + Triangle.RELATIVE_OFFSET_OF_C + 0];
+			final float triangleCY = shapes[shapeOffset + Triangle.RELATIVE_OFFSET_OF_C + 1];
+			final float triangleCZ = shapes[shapeOffset + Triangle.RELATIVE_OFFSET_OF_C + 2];
+			
+//			Initialize the variables with the surface intersection point (the X-, Y- and Z-values) of the triangle:
+			final float surfaceIntersectionX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 0];
+			final float surfaceIntersectionY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 1];
+			final float surfaceIntersectionZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 2];
+			
+			final float factorAX = triangleAX - surfaceIntersectionX;
+			final float factorAY = triangleAY - surfaceIntersectionY;
+			final float factorAZ = triangleAZ - surfaceIntersectionZ;
+			final float factorBX = triangleBX - surfaceIntersectionX;
+			final float factorBY = triangleBY - surfaceIntersectionY;
+			final float factorBZ = triangleBZ - surfaceIntersectionZ;
+			final float factorCX = triangleCX - surfaceIntersectionX;
+			final float factorCY = triangleCY - surfaceIntersectionY;
+			final float factorCZ = triangleCZ - surfaceIntersectionZ;
+			
+			final float factorALength = sqrt(factorAX * factorAX + factorAY * factorAY + factorAZ * factorAZ);
+			final float factorBLength = sqrt(factorBX * factorBX + factorBY * factorBY + factorBZ * factorBZ);
+			final float factorCLength = sqrt(factorCX * factorCX + factorCY * factorCY + factorCZ * factorCZ);
+			
+			final float deltaABX = triangleAX - triangleBX;
+			final float deltaABY = triangleAY - triangleBY;
+			final float deltaABZ = triangleAZ - triangleBZ;
+			final float deltaACX = triangleAX - triangleCX;
+			final float deltaACY = triangleAY - triangleCY;
+			final float deltaACZ = triangleAZ - triangleCZ;
+			
+			final float crossProduct0X = deltaABY * deltaACZ - deltaABZ * deltaACY;
+			final float crossProduct0Y = deltaABZ * deltaACX - deltaABX * deltaACZ;
+			final float crossProduct0Z = deltaABX * deltaACY - deltaABY * deltaACX;
+			
+			final float lengthReciprocal0 = 1.0F / sqrt(crossProduct0X * crossProduct0X + crossProduct0Y * crossProduct0Y + crossProduct0Z * crossProduct0Z);
+			
+			final float crossProduct1X = factorBY * factorCZ - factorBZ * factorCY;
+			final float crossProduct1Y = factorBZ * factorCX - factorBX * factorCZ;
+			final float crossProduct1Z = factorBX * factorCY - factorBY * factorCX;
+			
+			final float length1 = sqrt(crossProduct1X * crossProduct1X + crossProduct1Y * crossProduct1Y + crossProduct1Z * crossProduct1Z) * lengthReciprocal0;
+			
+			final float crossProduct2X = factorCY * factorAZ - factorCZ * factorAY;
+			final float crossProduct2Y = factorCZ * factorAX - factorCX * factorAZ;
+			final float crossProduct2Z = factorCX * factorAY - factorCY * factorAX;
+			
+			final float length2 = sqrt(crossProduct2X * crossProduct2X + crossProduct2Y * crossProduct2Y + crossProduct2Z * crossProduct2Z) * lengthReciprocal0;
+			
+			final float crossProduct3X = factorAY * factorBZ - factorAZ * factorBY;
+			final float crossProduct3Y = factorAZ * factorBX - factorAX * factorBZ;
+			final float crossProduct3Z = factorAX * factorBY - factorAY * factorBX;
+			
+			final float length3 = sqrt(crossProduct3X * crossProduct3X + crossProduct3Y * crossProduct3Y + crossProduct3Z * crossProduct3Z) * lengthReciprocal0;
+			
+//			TODO: Fix these UV-coordinates, so they're not hard-coded:
+			final float triangleAU = triangleAX * 0.001F;
+			final float triangleAV = triangleAZ * 0.001F;
+			final float triangleBU = triangleBX * 0.001F;
+			final float triangleBV = triangleBZ * 0.001F;
+			final float triangleCU = triangleCX * 0.001F;
+			final float triangleCV = triangleCZ * 0.001F;
+			
+//			Calculate the UV-coordinates:
+			final float textureU = triangleAU * length1 + triangleBU * length2 + triangleCU * length3;
+			final float textureV = triangleAV * length1 + triangleBV * length2 + triangleCV * length3;
+			
+//			Initialize the width and height of the texture:
+			final int textureWidth = textures[textureOffset + Texture.RELATIVE_OFFSET_OF_WIDTH];
+			final int textureHeight = textures[textureOffset + Texture.RELATIVE_OFFSET_OF_HEIGHT];
+			
+//			Calculate the X- and Y-values of the texture to be applied to the triangle on the surface intersection point:
+			final int textureX = (int)(IEEEremainder(textureU * factorALength + textureU * factorBLength + textureU * factorCLength, textureWidth));
+			final int textureY = (int)(IEEEremainder(textureV * factorALength + textureV * factorBLength + textureV * factorCLength, textureHeight));
+			
+//			Calculate the index of the RGB-value and fetch the RGB-value using said index:
+			final int textureIndex = textureY * textureWidth + textureX;
+			final int textureRGB = textures[textureOffset + Texture.RELATIVE_OFFSET_OF_DATA + (int)(IEEEremainder(abs(textureIndex), textureWidth * textureHeight))];
+			
+//			Calculate the R-, G- and B-components of the RGB-value:
+			float r = toR(textureRGB) * RGB_RECIPROCAL - 0.5F;
+			float g = toG(textureRGB) * RGB_RECIPROCAL - 0.5F;
+			float b = toB(textureRGB) * RGB_RECIPROCAL - 0.5F;
+			
+			float surfaceNormalX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 0] + r;
+			float surfaceNormalY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 1] + g;
+			float surfaceNormalZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 2] + b;
+			
+			final float lengthReciprocal = 1.0F / sqrt(surfaceNormalX * surfaceNormalX + surfaceNormalY * surfaceNormalY + surfaceNormalZ * surfaceNormalZ);
+			
+			surfaceNormalX *= lengthReciprocal;
+			surfaceNormalY *= lengthReciprocal;
+			surfaceNormalZ *= lengthReciprocal;
+			
+//			Update the surface normal of the intersections array:
+			intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 0] = surfaceNormalX;
+			intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 1] = surfaceNormalY;
+			intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 2] = surfaceNormalZ;
+		}
+	}
+	
 	public void performPlanarTriangleTextureMapping(final boolean isUpdatingPick, final float[] intersections, final float[] materials, final float[] pick, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int textureOffset, final int[] textures) {
+		if(textures[textureOffset + Texture.RELATIVE_OFFSET_OF_TYPE] == Texture.TYPE_NORMAL_MAP) {
+			return;
+		}
+		
 //		Initialize the variables with the position (the X-, Y- and Z-values) of the triangle:
 		final float triangleAX = shapes[shapeOffset + Triangle.RELATIVE_OFFSET_OF_A + 0];
 		final float triangleAY = shapes[shapeOffset + Triangle.RELATIVE_OFFSET_OF_A + 1];
@@ -536,7 +731,74 @@ public abstract class AbstractRayCasterKernel extends Kernel {
 		pixels[pixelOffset + 2] += b;
 	}
 	
+	public void performSphericalNormalMapping(final boolean isUpdatingPick, final float[] intersections, final float[] materials, final float[] pick, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int textureOffset, final int[] textures) {
+		if(textures[textureOffset + Texture.RELATIVE_OFFSET_OF_TYPE] == Texture.TYPE_NORMAL_MAP) {
+//			Initialize the variables with the position (the X-, Y- and Z-values) of the sphere:
+			final float sphereX = shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_POSITION + 0];
+			final float sphereY = shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_POSITION + 1];
+			final float sphereZ = shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_POSITION + 2];
+			
+//			Initialize the variables with the surface intersection point (the X-, Y- and Z-values) of the sphere:
+			final float surfaceIntersectionX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 0];
+			final float surfaceIntersectionY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 1];
+			final float surfaceIntersectionZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_INTERSECTION_POINT + 2];
+			
+//			Calculate the delta values between the position and the surface intersection point of the sphere:
+			final float dx = sphereX - surfaceIntersectionX;
+			final float dy = sphereY - surfaceIntersectionY;
+			final float dz = sphereZ - surfaceIntersectionZ;
+			
+//			Calculate the length reciprocal of the delta values:
+			float lengthReciprocal = 1.0F / sqrt(dx * dx + dy * dy + dz * dz);
+			
+//			Calculate the distance values by multiplying the delta values with the reciprocal of the length (normalize):
+			final float distanceX = dx * lengthReciprocal;
+			final float distanceY = dy * lengthReciprocal;
+			final float distanceZ = dz * lengthReciprocal;
+			
+//			Initialize the width and height of the texture:
+			final int textureWidth = textures[textureOffset + Texture.RELATIVE_OFFSET_OF_WIDTH];
+			final int textureHeight = textures[textureOffset + Texture.RELATIVE_OFFSET_OF_HEIGHT];
+			
+//			Calculate the U- and V-values of the sphere on the surface intersection point:
+			final float textureU = 0.5F + atan2(distanceX, distanceZ) / (2.0F * Constants.PI);
+			final float textureV = 0.5F + asin(distanceY) / Constants.PI;
+			
+//			Calculate the X- and Y-values of the texture to be applied to the sphere on the surface intersection point:
+			final int textureX = (int)(textureWidth * ((textureU + 1.0F) * 0.5F));
+			final int textureY = (int)(textureHeight * ((textureV + 1.0F) * 0.5F));
+			
+//			Calculate the index of the RGB-value and fetch the RGB-value using said index:
+			final int textureIndex = textureY * textureWidth + textureX;
+			final int textureRGB = textures[textureOffset + Texture.RELATIVE_OFFSET_OF_DATA + textureIndex];
+			
+//			Calculate the R-, G- and B-components of the RGB-value:
+			float r = toR(textureRGB) * RGB_RECIPROCAL - 0.5F;
+			float g = toG(textureRGB) * RGB_RECIPROCAL - 0.5F;
+			float b = toB(textureRGB) * RGB_RECIPROCAL - 0.5F;
+			
+			float surfaceNormalX = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 0] + r;
+			float surfaceNormalY = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 1] + g;
+			float surfaceNormalZ = intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 2] + b;
+			
+			lengthReciprocal = 1.0F / sqrt(surfaceNormalX * surfaceNormalX + surfaceNormalY * surfaceNormalY + surfaceNormalZ * surfaceNormalZ);
+			
+			surfaceNormalX *= lengthReciprocal;
+			surfaceNormalY *= lengthReciprocal;
+			surfaceNormalZ *= lengthReciprocal;
+			
+//			Update the surface normal of the intersections array:
+			intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 0] = surfaceNormalX;
+			intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 1] = surfaceNormalY;
+			intersections[intersectionOffset + Intersection.RELATIVE_OFFSET_OF_SURFACE_NORMAL + 2] = surfaceNormalZ;
+		}
+	}
+	
 	public void performSphericalTextureMapping(final boolean isUpdatingPick, final float[] intersections, final float[] materials, final float[] pick, final float[] pixels, final float[] shapes, final int intersectionOffset, final int materialOffset, final int pixelOffset, final int shapeOffset, final int textureOffset, final int[] textures) {
+		if(textures[textureOffset + Texture.RELATIVE_OFFSET_OF_TYPE] == Texture.TYPE_NORMAL_MAP) {
+			return;
+		}
+		
 //		Initialize the variables with the position (the X-, Y- and Z-values) of the sphere:
 		final float sphereX = shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_POSITION + 0];
 		final float sphereY = shapes[shapeOffset + Sphere.RELATIVE_OFFSET_OF_POSITION + 1];

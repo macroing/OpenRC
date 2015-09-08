@@ -161,7 +161,7 @@ public final class Scene {
 	public static Scene create(final Camera camera) {
 		final
 		Builder builder = new Builder(Objects.requireNonNull(camera, "camera == null"));
-//		builder.addTexture(Texture.createSolidTexture("Texture_0.jpg"));
+		builder.addTexture(Texture.createSolidTexture("Texture_0.jpg"));
 //		builder.addTexture(Texture.createSolidTexture("Texture_1.png"));
 		builder.addTexture(Texture.createSolidTexture("Texture_2.png"));
 //		builder.addTexture(Texture.createSolidTexture("Texture_3.png"));
@@ -171,16 +171,17 @@ public final class Scene {
 		builder.addTexture(Texture.createSolidTexture("Texture_7.jpg"));
 		builder.addTexture(Texture.createSolidTexture("Texture_8.jpg"));
 		builder.addTexture(Texture.createSolidTexture("Texture_9.jpg"));
+		builder.addTexture(Texture.createNormalMapTexture("NormalMap.jpg"));
 		
 		final int[] textureOffsets = builder.calculateTextureOffsets();
 		
-		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[5]));
-		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[4]));
-		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
-		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
-		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
-		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
-		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[7], textureOffsets[0]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[7], textureOffsets[5]));
+		builder.addMaterial(Material.obsidian().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[7], textureOffsets[0]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[7], textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[7], textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[7], textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[7], textureOffsets[doRandom(textureOffsets.length)]));
 //		builder.addMaterial(new Material().setAmbientColor(0.0F, 0.0F, 0.0F).setDiffuseColor(0.0F, 0.0F, 0.0F).setSpecularColor(1.0F, 1.0F, 1.0F).setSpecularPower(32.0F).setTextureOffsets(0));
 		
 		builder.addLight(new PointLight(0.0F, 0.0F, 0.0F, 100.0F));

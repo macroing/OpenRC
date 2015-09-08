@@ -39,6 +39,7 @@ public final class Texture {
 	public static final int RELATIVE_OFFSET_OF_TYPE = 0;
 	public static final int RELATIVE_OFFSET_OF_WIDTH = 2;
 	public static final int TYPE_DECAL = 2;
+	public static final int TYPE_NORMAL_MAP = 3;
 	public static final int TYPE_SOLID = 1;
 	
 	////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -128,6 +129,22 @@ public final class Texture {
 			return createDecalTexture(Texture.class.getResourceAsStream(name));
 		} catch(final Exception e) {
 			return Texture.createDecalTexture();
+		}
+	}
+	
+	public static Texture createNormalMapTexture() {
+		return new Texture(1, 1, TYPE_NORMAL_MAP, new int[] {255});
+	}
+	
+	public static Texture createNormalMapTexture(final InputStream inputStream) {
+		return doCreateTexture(TYPE_NORMAL_MAP, inputStream);
+	}
+	
+	public static Texture createNormalMapTexture(final String name) {
+		try {
+			return createNormalMapTexture(Texture.class.getResourceAsStream(name));
+		} catch(final Exception e) {
+			return Texture.createNormalMapTexture();
 		}
 	}
 	
