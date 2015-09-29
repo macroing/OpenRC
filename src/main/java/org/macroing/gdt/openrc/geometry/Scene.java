@@ -161,31 +161,36 @@ public final class Scene {
 	public static Scene create(final Camera camera) {
 		final
 		Builder builder = new Builder(Objects.requireNonNull(camera, "camera == null"));
-		builder.addTexture(Texture.createSolidTexture("Texture_0.jpg"));
+//		builder.addTexture(Texture.createSolidTexture("Texture_0.jpg"));
 //		builder.addTexture(Texture.createSolidTexture("Texture_1.png"));
-		builder.addTexture(Texture.createSolidTexture("Texture_2.png"));
+//		builder.addTexture(Texture.createSolidTexture("Texture_2.png"));
 //		builder.addTexture(Texture.createSolidTexture("Texture_3.png"));
 //		builder.addTexture(Texture.createDecalTexture("Texture_4.png"));
-		builder.addTexture(Texture.createSolidTexture("Texture_5.jpg"));
-		builder.addTexture(Texture.createSolidTexture("Texture_6.jpg"));
-		builder.addTexture(Texture.createSolidTexture("Texture_7.jpg"));
-		builder.addTexture(Texture.createSolidTexture("Texture_8.jpg"));
-		builder.addTexture(Texture.createSolidTexture("Texture_9.jpg"));
-		builder.addTexture(Texture.createNormalMapTexture("NormalMap.jpg"));
+//		builder.addTexture(Texture.createSolidTexture("Texture_5.jpg"));
+//		builder.addTexture(Texture.createSolidTexture("Texture_6.jpg"));
+//		builder.addTexture(Texture.createSolidTexture("Texture_7.jpg"));
+//		builder.addTexture(Texture.createSolidTexture("Texture_8.jpg"));
+//		builder.addTexture(Texture.createSolidTexture("Texture_9.jpg"));
+//		builder.addTexture(Texture.createNormalMapTexture("NormalMap.jpg"));
+//		builder.addTexture(Texture.createNormalMapTexture("NormalMap_1.jpg"));
+		builder.addTexture(Texture.createSolidTexture("154.JPG"));
+		builder.addTexture(Texture.createNormalMapTexture("154_norm.JPG"));
+		builder.addTexture(Texture.createSolidTexture("197.JPG"));
+		builder.addTexture(Texture.createNormalMapTexture("197_norm.JPG"));
 		
 		final int[] textureOffsets = builder.calculateTextureOffsets();
 		
-		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[7], textureOffsets[0]));
-		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[7], textureOffsets[5]));
-		builder.addMaterial(Material.obsidian().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[7], textureOffsets[0]));
-		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[7], textureOffsets[doRandom(textureOffsets.length)]));
-		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[7], textureOffsets[doRandom(textureOffsets.length)]));
-		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[7], textureOffsets[doRandom(textureOffsets.length)]));
-		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[7], textureOffsets[doRandom(textureOffsets.length)]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[1], textureOffsets[0]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[3], textureOffsets[2]));
+		builder.addMaterial(Material.obsidian().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[1], textureOffsets[0]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[1], textureOffsets[0]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[1], textureOffsets[0]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[1], textureOffsets[0]));
+		builder.addMaterial(Material.blackPlastic().setSpecularPower(100.0F).setTextureOffsets(textureOffsets[1], textureOffsets[0]));
 //		builder.addMaterial(new Material().setAmbientColor(0.0F, 0.0F, 0.0F).setDiffuseColor(0.0F, 0.0F, 0.0F).setSpecularColor(1.0F, 1.0F, 1.0F).setSpecularPower(32.0F).setTextureOffsets(0));
 		
 		builder.addLight(new PointLight(0.0F, 0.0F, 0.0F, 100.0F));
-		builder.addLight(new PointLight(200.0F, -800.0F, 400.0F, 100.0F));
+//		builder.addLight(new PointLight(200.0F, -800.0F, 400.0F, 100.0F));
 //		builder.addLight(new PointLight(600.0F, 20.0F, 600.0F, 100.0F));
 //		builder.addLight(new PointLight(600.0F, 20.0F, 400.0F, 100.0F));
 //		builder.addLight(new PointLight(400.0F, 20.0F, 600.0F, 100.0F));

@@ -49,21 +49,18 @@ import org.macroing.gdt.openrc.Constants;
  * <li>Look-at X</li>
  * <li>Look-at Y</li>
  * <li>Look-at Z</li>
- * <li>ONB-U X</li>
- * <li>ONB-U Y</li>
- * <li>ONB-U Z</li>
- * <li>ONB-V X</li>
- * <li>ONB-V Y</li>
- * <li>ONB-V Z</li>
- * <li>ONB-W X</li>
- * <li>ONB-W Y</li>
- * <li>ONB-W Z</li>
+ * <li>OrthoNormalBasis-U X</li>
+ * <li>OrthoNormalBasis-U Y</li>
+ * <li>OrthoNormalBasis-U Z</li>
+ * <li>OrthoNormalBasis-V X</li>
+ * <li>OrthoNormalBasis-V Y</li>
+ * <li>OrthoNormalBasis-V Z</li>
+ * <li>OrthoNormalBasis-W X</li>
+ * <li>OrthoNormalBasis-W Y</li>
+ * <li>OrthoNormalBasis-W Z</li>
  * <li>View-plane distance</li>
+ * <li>Zoom</li>
  * </ol>
- * <p>
- * If you don't know what ONB stands for, then it is OrthoNormal Basis.
- * 
- * TODO: Find out whether Look-at Z and View-plane distance are correlated in some way!?
  * 
  * @since 1.0.0
  * @author J&#246;rgen Lundgren
