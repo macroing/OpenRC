@@ -39,6 +39,7 @@ class DataBlock:
 class Scene:
     def __init__(self, scene):
         self.packsTriangles = []
+        self.shapeLength = 0
         self.packsLights = []
         self.packCamera = None
         self.packsMaterials = []
@@ -87,9 +88,10 @@ class Scene:
             cos = [loops[i].vert.co for i in range(3)]
             materialId = loops[0].face.material_index
 
+            size = 15
             p = DataBlock()
             p.packF(3.0) # Type
-            p.packF(15.0) # Size
+            p.packF(float(size)) # Size
             p.packF(materialId + matOff) # Material # Not impl
             p.packF(cos[0].x) # A_X
             p.packF(cos[0].y) # A_Y
@@ -104,6 +106,8 @@ class Scene:
             p.packF(normal.y) # Surface_Normal_Y
             p.packF(normal.z) # Surface_Normal_Z
             self.packsTriangles.append(p)
+            self.shapeLength += size
+
         bm.free()
 
     def addObjectCamera(self, obj):
@@ -179,8 +183,8 @@ class Scene:
 
         #float:      Shapes_Length                       ---
         #float[]:    Shapes[Shapes_Length]               ---
-        print('%d triangles' % len(self.packsTriangles))
-        writeInt(fd, int(len(self.packsTriangles)))
+        print('%d (%d b) triangles' % (len(self.packsTriangles), self.shapeLength))
+        writeInt(fd, int(self.shapeLength))
         for p in self.packsTriangles: p.write(fd)
 
 class ObjectMoveX(bpy.types.Operator):
