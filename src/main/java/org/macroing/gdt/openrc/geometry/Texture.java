@@ -1,5 +1,5 @@
 /**
- * Copyright 2009 - 2015 J&#246;rgen Lundgren
+ * Copyright 2009 - 2016 J&#246;rgen Lundgren
  * 
  * This file is part of org.macroing.gdt.openrc.
  * 
