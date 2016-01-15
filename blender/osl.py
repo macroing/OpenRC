@@ -1,7 +1,7 @@
 bl_info = {
     "name": "OpenRC export",
     "author": "Martin Sandgren <carlmartus@gmail.com>",
-    "version": (0, 1),
+    "version": (0, 2),
     "blender": (2, 72, 0),
     "description": "Exports the scene to a OpenRC readable format. Exported file will"
         "be placed in same folder as the active blender on disk",
@@ -39,6 +39,7 @@ class DataBlock:
 class Scene:
     def __init__(self, scene):
         self.packsTriangles = []
+        self.shapeLength = 0
         self.packsLights = []
         self.packCamera = None
         self.packsMaterials = []
@@ -65,7 +66,7 @@ class Scene:
             p.packF(0.0) # Ambient
             p.packF(0.0)
             p.packF(0.0)
-            p.packF(0.0)
+            p.packF(0.0) # Intensity
             p.packF(m.diffuse_color[0]) # Diffuse color
             p.packF(m.diffuse_color[1])
             p.packF(m.diffuse_color[2])
@@ -73,15 +74,11 @@ class Scene:
             p.packF(m.specular_color[0]) # Specular color
             p.packF(m.specular_color[1])
             p.packF(m.specular_color[2])
-            p.packF(1.0)
-            p.packF(0.5)
-            p.packF(0.5)
-            p.packF(0.0)
-#:      Specular_Power                      ---
-#:      Reflection                          ---
-#:      Refraction                          ---
-#:      Texture_Count                       ---
-#[]:    Texture_Offsets[Texture_Count]      ---
+            p.packF(1.0) # Intensity
+            p.packF(0.5) # Specular power
+            p.packF(0.5) # Refclection
+            p.packF(0.0) # Refraction
+            p.packF(0.0) # Texture count
             self.addMaterial(p)
 
         bm = bmesh.new()
@@ -91,9 +88,10 @@ class Scene:
             cos = [loops[i].vert.co for i in range(3)]
             materialId = loops[0].face.material_index
 
+            size = 15
             p = DataBlock()
             p.packF(3.0) # Type
-            p.packF(15.0) # Size
+            p.packF(float(size)) # Size
             p.packF(materialId + matOff) # Material # Not impl
             p.packF(cos[0].x) # A_X
             p.packF(cos[0].y) # A_Y
@@ -108,6 +106,8 @@ class Scene:
             p.packF(normal.y) # Surface_Normal_Y
             p.packF(normal.z) # Surface_Normal_Z
             self.packsTriangles.append(p)
+            self.shapeLength += size
+
         bm.free()
 
     def addObjectCamera(self, obj):
@@ -127,15 +127,17 @@ class Scene:
         p.packF(co.x - forw[0])
         p.packF(co.y - forw[1])
         p.packF(co.z - forw[2])
-        p.packF(0.0)
-        p.packF(0.0)
-        p.packF(0.0)
-        p.packF(0.0)
-        p.packF(0.0)
-        p.packF(0.0)
-        p.packF(0.0)
-        p.packF(0.0)
-        p.packF(0.0)
+        p.packF(20.0)
+        p.packF(1.0)
+        #p.packF(0.0)
+        #p.packF(0.0)
+        #p.packF(0.0)
+        #p.packF(0.0)
+        #p.packF(0.0)
+        #p.packF(0.0)
+        #p.packF(0.0)
+        #p.packF(0.0)
+        #p.packF(0.0)
         self.packCamera = p
 
     def addObjectPointLight(self, obj):
@@ -148,6 +150,7 @@ class Scene:
         p.packF(co.y)
         p.packF(co.z)
         p.packF(1.0)
+        self.packsLights.append(p)
 
     def addTexture(self, data):
         pass
@@ -158,25 +161,30 @@ class Scene:
 
     def write(self, fd):
         #float[]:    Camera[19]                          ---
+        print('Writing')
         self.packCamera.write(fd)
 
         #float:      Textures_Length                     ---
         #float[]:    Textures[Textures_Length]           ---
-        writeFloat(fd, 0.0)
+        print('No textured')
+        writeInt(fd, int(0.0))
 
         #float:      Materials_Length                    ---
         #float[]:    Materials[Materials_Length]         ---
-        writeFloat(fd, float(len(self.packsMaterials)))
+        print('%d materials' % len(self.packsMaterials))
+        writeInt(fd, int(len(self.packsMaterials)))
         for p in self.packsMaterials: p.write(fd)
 
         #float:      Lights_Length                       ---
         #float[]:    Lights[Lights_Length]               ---
-        writeFloat(fd, float(len(self.packsLights)))
+        print('%d lights' % len(self.packsLights))
+        writeInt(fd, int(len(self.packsLights)))
         for p in self.packsLights: p.write(fd)
 
         #float:      Shapes_Length                       ---
         #float[]:    Shapes[Shapes_Length]               ---
-        writeFloat(fd, float(len(self.packsTriangles)))
+        print('%d (%d b) triangles' % (len(self.packsTriangles), self.shapeLength))
+        writeInt(fd, int(self.shapeLength))
         for p in self.packsTriangles: p.write(fd)
 
 class ObjectMoveX(bpy.types.Operator):
