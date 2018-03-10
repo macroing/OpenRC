@@ -1,5 +1,7 @@
 OpenRC (v. 0.1-beta)
 ====================
+[![Build Status](https://travis-ci.org/carlmartus/OpenRC.svg?branch=master)](https://travis-ci.org/carlmartus/OpenRC)
+
 OpenRC (short for Open Ray Caster) is, as its name suggests, an open source program. But it's not just any program. It's a program for rendering 3D scenes using the Ray Casting algorithm in realtime on the GPU.
 
 Because of the name, Open Ray Caster, some of you might believe Ray Casting is the only goal with this project. This is, however, not true. Additional algorithms, such as Whitted Ray Tracing and Path Tracing, are likely to be implemented.
